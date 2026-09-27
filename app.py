@@ -565,7 +565,7 @@ Return ONLY a valid JSON object matching this schema:
 }}
 """
         response = client.chat.completions.create(
-            model="llama3-70b-8192",
+            model="openai/gpt-oss-120b",
             messages=[
                 {"role": "system", "content": "You are a clinical diagnostic analysis engine. Respond strictly in valid JSON."},
                 {"role": "user", "content": prompt}
