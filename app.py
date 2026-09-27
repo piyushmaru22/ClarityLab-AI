@@ -6,6 +6,7 @@ import os
 import re
 import textwrap
 import sys
+import base64
 
 import streamlit as st
 from PIL import Image
@@ -141,7 +142,7 @@ header[data-testid="stHeader"] { background: transparent !important; }
     box-shadow: 0 8px 30px rgba(0, 229, 255, 0.25), inset 0 0 20px rgba(0,229,255,0.1); 
     backdrop-filter: blur(12px);
 }
-.cl-logo svg { width: 44px; height: 44px; }
+.cl-logo img, .cl-logo svg { width: 44px; height: 44px; }
 
 /* Status Chip */
 .cl-chip { display: inline-flex; align-items: center; gap: 10px; padding: 8px 18px; border-radius: 999px; background: rgba(0, 229, 255, 0.05); border: 1px solid rgba(0, 229, 255, 0.3); font: 500 13px 'JetBrains Mono', monospace; color: var(--neon-cyan); box-shadow: 0 0 20px rgba(0, 229, 255, 0.1); backdrop-filter: blur(8px); }
@@ -287,9 +288,8 @@ details.dq[open] .dq-chev { transform: rotate(180deg); color: var(--neon-cyan); 
 """
 render_html(THEME_CSS)
 
-# REALISTIC 3D GLOSSY SVG LOGO
-ICON_LOGO = '''
-<svg width="100%" height="100%" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style="filter: drop-shadow(0px 4px 6px rgba(0,229,255,0.4));">
+# REALISTIC 3D GLOSSY SVG LOGO (Base64 Encoded to bypass Streamlit Sanitization)
+RAW_SVG = """<svg width="100%" height="100%" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
     <defs>
         <radialGradient id="orbGrad" cx="30%" cy="30%" r="70%">
             <stop offset="0%" stop-color="#ffffff" />
@@ -325,8 +325,10 @@ ICON_LOGO = '''
           
     <!-- Top Glass Glossy Shine -->
     <ellipse cx="50" cy="20" rx="32" ry="12" fill="url(#glassReflection)"/>
-</svg>
-'''
+</svg>"""
+
+B64_LOGO = base64.b64encode(RAW_SVG.encode('utf-8')).decode('utf-8')
+ICON_LOGO = f'<img src="data:image/svg+xml;base64,{B64_LOGO}" alt="Logo" style="filter: drop-shadow(0px 4px 6px rgba(0,229,255,0.4));" />'
 
 ICON_UP = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>'
 ICON_DOWN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M19 12l-7 7-7-7"/></svg>'
