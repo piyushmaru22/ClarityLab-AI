@@ -129,9 +129,19 @@ header[data-testid="stHeader"] { background: transparent !important; }
 
 /* Header & Ribbons */
 .cl-header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 24px; border-bottom: 1px solid var(--border-glass); margin-bottom: 24px; flex-wrap: wrap; gap: 20px; }
-.cl-brand { display: flex; align-items: center; gap: 18px; }
-.cl-logo { width: 52px; height: 52px; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, rgba(0,229,255,0.15), rgba(0,230,118,0.15)); border: 1px solid var(--neon-cyan); border-radius: 16px; color: var(--neon-cyan); box-shadow: 0 0 25px rgba(0, 229, 255, 0.2); }
-.cl-logo svg { width: 26px; height: 26px; }
+.cl-brand { display: flex; align-items: center; gap: 20px; }
+
+/* STUNNING 3D LOGO CONTAINER */
+.cl-logo { 
+    width: 60px; height: 60px; 
+    display: flex; align-items: center; justify-content: center; 
+    background: rgba(0, 10, 20, 0.5); 
+    border: 1px solid rgba(0, 229, 255, 0.4); 
+    border-radius: 18px; 
+    box-shadow: 0 8px 30px rgba(0, 229, 255, 0.25), inset 0 0 20px rgba(0,229,255,0.1); 
+    backdrop-filter: blur(12px);
+}
+.cl-logo svg { width: 44px; height: 44px; }
 
 /* Status Chip */
 .cl-chip { display: inline-flex; align-items: center; gap: 10px; padding: 8px 18px; border-radius: 999px; background: rgba(0, 229, 255, 0.05); border: 1px solid rgba(0, 229, 255, 0.3); font: 500 13px 'JetBrains Mono', monospace; color: var(--neon-cyan); box-shadow: 0 0 20px rgba(0, 229, 255, 0.1); backdrop-filter: blur(8px); }
@@ -267,8 +277,7 @@ details.dq[open] .dq-chev { transform: rotate(180deg); color: var(--neon-cyan); 
 
 /* Floating Spatial Onboarding */
 .ob-card { animation: cardRise 0.7s var(--ease-spring) both, floatSlow 6s ease-in-out infinite; padding: 56px 40px; text-align: center; border: 1px solid rgba(0, 229, 255, 0.25); box-shadow: 0 20px 60px rgba(0,0,0,0.5), inset 0 0 50px rgba(0,229,255,0.06); margin-top: 48px; }
-.ob-card .cl-logo { margin: 0 auto 28px; width: 72px; height: 72px; border-radius: 20px; box-shadow: 0 0 30px rgba(0, 229, 255, 0.3); }
-.ob-card .cl-logo svg { width: 34px; height: 34px; }
+.ob-card .cl-logo { margin: 0 auto 28px; }
 .ob-step { display: inline-block; font: 700 12px 'JetBrains Mono', monospace; letter-spacing: 0.25em; text-transform: uppercase; color: var(--neon-cyan); margin-bottom: 16px; background: rgba(0,229,255,0.12); padding: 6px 16px; border-radius: 999px; }
 .ob-title { font-size: 2.4rem; font-weight: 700; color: var(--text-main); margin: 0 0 18px; letter-spacing: -0.03em; }
 .ob-desc { font-size: 1.15rem; line-height: 1.6; color: var(--text-muted); margin: 0 auto; max-width: 520px; }
@@ -278,8 +287,47 @@ details.dq[open] .dq-chev { transform: rotate(180deg); color: var(--neon-cyan); 
 """
 render_html(THEME_CSS)
 
-# Inline SVG Icons
-ICON_LOGO = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7z"/><path d="M8 15h2l1-3 2 6 1-3h2"/></svg>'
+# REALISTIC 3D GLOSSY SVG LOGO
+ICON_LOGO = '''
+<svg width="100%" height="100%" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style="filter: drop-shadow(0px 4px 6px rgba(0,229,255,0.4));">
+    <defs>
+        <radialGradient id="orbGrad" cx="30%" cy="30%" r="70%">
+            <stop offset="0%" stop-color="#ffffff" />
+            <stop offset="15%" stop-color="#aaffff" />
+            <stop offset="40%" stop-color="#00e5ff" />
+            <stop offset="75%" stop-color="#0066ff" />
+            <stop offset="100%" stop-color="#000b22" />
+        </radialGradient>
+        <linearGradient id="glassReflection" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stop-color="#ffffff" stop-opacity="0.9" />
+            <stop offset="30%" stop-color="#ffffff" stop-opacity="0.2" />
+            <stop offset="100%" stop-color="#ffffff" stop-opacity="0" />
+        </linearGradient>
+        <filter id="glowEffect" x="-20%" y="-20%" width="140%" height="140%">
+            <feGaussianBlur stdDeviation="3" result="blur" />
+            <feComposite in="SourceGraphic" in2="blur" operator="over" />
+        </filter>
+    </defs>
+    <!-- 3D Orb -->
+    <circle cx="50" cy="50" r="46" fill="url(#orbGrad)"/>
+    
+    <!-- Inner Border Highlight -->
+    <circle cx="50" cy="50" r="45" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="2"/>
+    
+    <!-- Medical Cross -->
+    <path d="M43 25 h14 v18 h18 v14 h-18 v18 h-14 v-18 h-18 v-14 h18 z" fill="rgba(255,255,255,0.2)"/>
+    
+    <!-- Bright White Heartbeat Pulse -->
+    <path d="M 10 52 L 28 52 L 38 22 L 55 88 L 68 42 L 76 52 L 90 52" 
+          fill="none" stroke="#ffffff" stroke-width="5" 
+          stroke-linecap="round" stroke-linejoin="round" 
+          filter="url(#glowEffect)"/>
+          
+    <!-- Top Glass Glossy Shine -->
+    <ellipse cx="50" cy="20" rx="32" ry="12" fill="url(#glassReflection)"/>
+</svg>
+'''
+
 ICON_UP = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>'
 ICON_DOWN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M19 12l-7 7-7-7"/></svg>'
 ICON_CHEV = '<svg class="dq-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>'
@@ -350,7 +398,7 @@ TEXTS = {
         "diet_profile_label": "आहार शैली:",
         "upload_header": "अपनी मेडिकल लैब रिपोर्ट अपलोड करें",
         "upload_desc": "किसी भी फॉर्मेट (PDF या फोटो) में अपनी रिपोर्ट अपलोड करें। ऐप आपकी रिपोर्ट को पढ़कर सरल हिंदी में जानकारी देगा।",
-        "upload_label": "PDF या फोटो फाइल अपलोड करें",
+        "upload_label": "PDF या फोटो/इमेज फाइल अपलोड करें",
         "summary_title": "स्वास्थ्य रिपोर्ट का मुख्य सारांश",
         "missing_title": "आपके शरीर के अंगों में क्या हो रहा है",
         "recorded_val": "रिपोर्ट में दर्ज मात्रा:",
@@ -515,7 +563,7 @@ Return ONLY a valid JSON object matching this schema:
 }}
 """
         response = client.chat.completions.create(
-            model="openai/gpt-oss-120b",
+            model="llama3-70b-8192",
             messages=[
                 {"role": "system", "content": "You are a clinical diagnostic analysis engine. Respond strictly in valid JSON."},
                 {"role": "user", "content": prompt}
@@ -743,7 +791,7 @@ else:
         render_html(f"""
         <header class="cl-header">
             <div class="cl-brand">
-                <span class="cl-logo">{ICON_LOGO}</span>
+                <div class="cl-logo">{ICON_LOGO}</div>
                 <div>
                     <h1 class="cl-title">{esc(L['title'])}</h1>
                     <p class="cl-tagline">{esc(L['tagline'])}</p>
