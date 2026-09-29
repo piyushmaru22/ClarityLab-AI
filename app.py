@@ -8,6 +8,11 @@ import textwrap
 import sys
 import base64
 
+import concurrent.futures
+import time
+import re
+import json
+
 import streamlit as st
 from PIL import Image
 
@@ -504,81 +509,111 @@ def analyze_report_with_groq(file_bytes, filename, mime_type, target_lang, targe
         if Groq is None:
             return None, "groq library not installed. Run: pip install groq"
 
+        client = Groq(api_key=api_key.strip())
+
+        # 1. EXTRACT & MINIFY TEXT (Remove OCR junk spaces)
         extracted_text = extract_raw_file_text(file_bytes, filename, mime_type)
+        extracted_text = re.sub(r'\n\s*\n', '\n', extracted_text)
+        extracted_text = re.sub(r'[ \t]+', ' ', extracted_text)
+        
         if not extracted_text.strip():
             return None, "Could not extract text from document. Please ensure it is a clear scan."
 
-        client = Groq(api_key=api_key.strip())
+        # 2. DIVIDE DOCUMENT INTO SECTIONS
+        # Split the document in half (or into chunks of 8,000 characters)
+        CHUNK_SIZE = 8000
+        sections = [extracted_text[i:i + CHUNK_SIZE] for i in range(0, len(extracted_text), CHUNK_SIZE)]
+        
+        # We will cycle through these different fast models for the Workers
+        worker_models = ["llama-3.1-8b-versatile", "mixtral-8x7b-32768"]
+        
+        # ---------------------------------------------------------
+        # AGENT 1: WORKER FUNCTION (Only extracts numbers, cheap on tokens)
+        # ---------------------------------------------------------
+        def worker_extraction(section_text, model_name, section_id):
+            prompt = f"""
+            Extract lab biomarkers from this section of text. 
+            Return ONLY a valid JSON array of objects with these exact keys:
+            "name" (English), "category" (English), "value", "numeric_value" (float or null), "unit", "ref_low" (float or null), "ref_high" (float or null), "status_code" ("normal", "high", or "low").
+            
+            TEXT TO ANALYZE (Section {section_id}):
+            {section_text}
+            """
+            
+            res = client.chat.completions.create(
+                model=model_name,
+                messages=[{"role": "system", "content": "You are a data extractor. Output ONLY a valid JSON object containing a 'parameters' list."},
+                          {"role": "user", "content": prompt}],
+                response_format={"type": "json_object"},
+                temperature=0.0,
+            )
+            return json.loads(res.choices[0].message.content).get("parameters", [])
 
-        prompt = f"""
-You are an expert clinical laboratory analyst and medical AI consultant.
-Analyze this medical lab report text with maximum clinical precision:
+        # 3. PARALLEL EXECUTION: Run Workers at the exact same time
+        all_raw_parameters = []
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            # Map sections to different models
+            futures = []
+            for i, section in enumerate(sections):
+                model_to_use = worker_models[i % len(worker_models)]
+                futures.append(executor.submit(worker_extraction, section, model_to_use, i+1))
+            
+            for future in concurrent.futures.as_completed(futures):
+                try:
+                    all_raw_parameters.extend(future.result())
+                except Exception as e:
+                    print(f"Worker Error: {e}")
 
---- REPORT TEXT ---
-{extracted_text}
---- END REPORT ---
+        if not all_raw_parameters:
+            return None, "No medical parameters found in the document."
 
-Requirements:
-- Target Language: {target_lang} (ALL text fields MUST be in {target_lang})
-- Dietary Profile: {target_diet}
-
-STRICT CLINICAL RULES:
-1. Ignore Lab IDs, doctor registration numbers, invoice numbers, and patient address details.
-2. Extract all clinical biomarkers (Fasting Glucose, HbA1c, Cholesterol, Triglycerides, Hemoglobin, Creatinine, Bilirubin, TSH, etc.).
-3. For each biomarker:
-   - "name": Clean parameter title translated to {target_lang}.
-   - "category": Short category (e.g. Metabolic, Lipid, Thyroid, Blood Count, Liver, Kidney) translated to {target_lang}.
-   - "value": Observed measured value with unit and reference range.
-   - "numeric_value": Float value, or null.
-   - "unit": Unit string, or "".
-   - "ref_low": Lower bound float, or null.
-   - "ref_high": Upper bound float, or null.
-   - "status_code": "normal" | "high" | "low".
-   - "status": Translated status word.
-   - "badge": "badge-attention" if High/Low, or "badge-normal" if Normal.
-   - "explanation": Simple human language biological explanation in {target_lang}.
-   - "food_remedies": Specific Indian food remedies aligned with {target_diet} in {target_lang}.
-   - "questions_for_doctor": 2-3 specific clinical questions in {target_lang}.
-
-4. "summary": 2-3 sentence overview of overall report in {target_lang}.
-
-Return ONLY a valid JSON object matching this schema:
-{{
-  "summary": "Full summary in {target_lang}",
-  "parameters": [
-    {{
-      "name": "string",
-      "category": "string",
-      "value": "string",
-      "numeric_value": 0,
-      "unit": "string",
-      "ref_low": 0,
-      "ref_high": 0,
-      "status_code": "normal | high | low",
-      "status": "string",
-      "badge": "badge-attention OR badge-normal",
-      "explanation": "string",
-      "food_remedies": "string",
-      "questions_for_doctor": ["string", "string"]
-    }}
-  ]
-}}
-"""
-        response = client.chat.completions.create(
-            model="openai/gpt-oss-120b",
+        # ---------------------------------------------------------
+        # AGENT 2: THE MASTER MODEL (Logic & Synthesis)
+        # ---------------------------------------------------------
+        # Now we pass the lightweight JSON (not the heavy PDF text) to the smartest model
+        master_model = "llama-3.3-70b-versatile"
+        
+        master_prompt = f"""
+        You are the Chief Medical AI. I have already extracted the raw lab data from a large document.
+        Here is the combined data:
+        {json.dumps(all_raw_parameters)}
+        
+        TASKS:
+        1. Translate the "name" and "category" of all biomarkers into {target_lang}.
+        2. Generate a "status" string (translated), a "badge" ("badge-attention" or "badge-normal"), and an "explanation" of what it means biologically in {target_lang}.
+        3. Add "food_remedies": Indian dietary suggestions aligned with a '{target_diet}' diet in {target_lang}.
+        4. Add "questions_for_doctor": 2-3 specific clinical questions in {target_lang}.
+        5. Write a 2-3 sentence "summary" of the overall health profile in {target_lang}.
+        
+        Return ONLY valid JSON matching this structure:
+        {{
+            "summary": "overall summary...",
+            "parameters": [
+               {{ 
+                 "name": "...", "category": "...", "value": "...", "numeric_value": 0, "unit": "...", 
+                 "ref_low": 0, "ref_high": 0, "status_code": "...", "status": "...", "badge": "...", 
+                 "explanation": "...", "food_remedies": "...", "questions_for_doctor": ["..."]
+               }}
+            ]
+        }}
+        """
+        
+        master_res = client.chat.completions.create(
+            model=master_model,
             messages=[
-                {"role": "system", "content": "You are a clinical diagnostic analysis engine. Respond strictly in valid JSON."},
-                {"role": "user", "content": prompt}
+                {"role": "system", "content": "You are a senior clinical consultant. Output strict JSON."},
+                {"role": "user", "content": master_prompt}
             ],
             response_format={"type": "json_object"},
-            temperature=0.1,
+            temperature=0.2, # Slight creativity for food/summaries
         )
+        
+        final_integrated_data = json.loads(master_res.choices[0].message.content)
 
-        parsed_data = json.loads(response.choices[0].message.content)
-        return parsed_data, None
+        return final_integrated_data, None
 
     except Exception as e:
-        return None, f"Groq Execution Error: {str(e)}"
+        return None, f"Multi-Agent Execution Error: {str(e)}"
 
 # ---------------------------------------------------------
 # Normalization & UI Builders
