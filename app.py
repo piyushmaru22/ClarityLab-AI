@@ -300,7 +300,7 @@ RAW_SVG = """<svg width="100%" height="100%" viewBox="0 0 100 100" xmlns="http:/
         <linearGradient id="glassReflection" x1="0%" y1="0%" x2="0%" y2="100%">
             <stop offset="0%" stop-color="#ffffff" stop-opacity="0.9" />
             <stop offset="30%" stop-color="#ffffff" stop-opacity="0.2" />
-            <stop offset="100%" stop-color="#ffffff" stop-opacity="0" />
+            <stop offset="100%" stop-color="#ffffff" stop-opacity="0.0" />
         </linearGradient>
         <filter id="glowEffect" x="-20%" y="-20%" width="140%" height="140%">
             <feGaussianBlur stdDeviation="3" result="blur" />
@@ -525,7 +525,7 @@ def extract_pages_text(file_bytes: bytes, filename: str, mime_type: str) -> list
     return pages_text
 
 # ---------------------------------------------------------
-# Helper Functions for AI & Token Management
+# AI Helper & Robust Candidate Resolver
 # ---------------------------------------------------------
 def clean_json_response(content: str) -> dict:
     cleaned = content.strip()
@@ -541,10 +541,54 @@ def clean_json_response(content: str) -> dict:
             return json.loads(cleaned[start:end+1])
         raise
 
+def resolve_candidate_models(client, is_openrouter: bool) -> list[str]:
+    """
+    Builds an ordered candidate list starting with openai/gpt-oss-120b and active alternatives.
+    Queries client.models.list() to automatically filter out decommissioned endpoints.
+    """
+    if is_openrouter:
+        return [
+            "openai/gpt-oss-120b",
+            "openai/gpt-oss-20b",
+            "deepseek/deepseek-r1",
+            "meta-llama/llama-3.3-70b-instruct",
+            "qwen/qwen-2.5-72b-instruct",
+        ]
+
+    # Target priority list for Groq
+    desired_priority = [
+        "openai/gpt-oss-120b",
+        "openai/gpt-oss-20b",
+        "llama-3.3-70b-versatile",
+        "deepseek-r1-distill-llama-70b",
+        "llama3-70b-8192",
+        "llama-3.1-8b-instant",
+    ]
+
+    try:
+        remote_models = client.models.list()
+        active_ids = {m.id for m in remote_models.data}
+        ordered = [m for m in desired_priority if m in active_ids]
+        for m in sorted(active_ids):
+            if m not in ordered and not any(skip in m for skip in ["whisper", "guard", "vision", "orpheus"]):
+                ordered.append(m)
+        if ordered:
+            return ordered
+    except Exception as e:
+        print(f"Model query warning: {e}")
+
+    # Fallback to standard safe list if models.list() fails
+    return [
+        "openai/gpt-oss-120b",
+        "openai/gpt-oss-20b",
+        "llama-3.3-70b-versatile",
+        "deepseek-r1-distill-llama-70b",
+    ]
+
 def call_ai_with_fallback(client, messages, candidate_models, response_format=None, temperature=0.1):
     """
-    Cycles sequentially through candidate models to guarantee reliable execution.
-    Automatically handles rate limits, deprecated IDs, and 404 model errors.
+    Executes completion across the resolved candidates, gracefully handling
+    400 decommissioned, 404 not found, and rate limits.
     """
     last_err = None
     for model_name in candidate_models:
@@ -560,7 +604,10 @@ def call_ai_with_fallback(client, messages, candidate_models, response_format=No
         except Exception as e:
             last_err = e
             err_msg = str(e).lower()
-            if any(k in err_msg for k in ["not exist", "model_not_found", "404", "rate", "tpm", "quota", "invalid_request_error"]):
+            if any(k in err_msg for k in [
+                "decommissioned", "deprecated", "not exist", 
+                "model_not_found", "404", "400", "rate", "tpm", "quota", "invalid_request_error"
+            ]):
                 continue
             raise e
 
@@ -585,23 +632,12 @@ def analyze_report_with_ai(file_bytes, filename, mime_type, target_lang, target_
                 base_url="[https://openrouter.ai/api/v1](https://openrouter.ai/api/v1)",
                 api_key=key,
             )
-            # Full model slugs for OpenRouter / universal endpoints
-            candidate_models = [
-                "openai/gpt-oss-120b",
-                "deepseek/deepseek-r1",
-                "meta-llama/llama-3.3-70b-instruct",
-                "qwen/qwen-2.5-72b-instruct",
-            ]
         else:
             if Groq is None:
                 return None, "groq library not installed. Run: pip install groq"
             client = Groq(api_key=key)
-            # Verified production Groq model IDs
-            candidate_models = [
-                "llama-3.3-70b-versatile",
-                "mixtral-8x7b-32768",
-                "gemma2-9b-it",
-            ]
+
+        candidate_models = resolve_candidate_models(client, is_openrouter)
 
         # STAGE 1: Extract all parameters per 2-page chunk
         chunk_size = 2
