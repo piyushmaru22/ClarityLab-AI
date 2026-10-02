@@ -6,7 +6,10 @@ import os
 import re
 import textwrap
 import sys
+import time
 import base64
+from concurrent.futures import ThreadPoolExecutor
+
 import streamlit as st
 from PIL import Image
 
@@ -426,167 +429,7 @@ TEXTS = {
 L = TEXTS[st.session_state.selected_lang]
 
 # ---------------------------------------------------------
-# Document Text Extraction  (robust for large 2-15 MB files)
-# ---------------------------------------------------------
-MAX_REPORT_CHARS = 35000          # safe ~8-10k tokens
-MAX_OCR_PAGES = 6
-MAX_IMAGE_SIDE = 1800             # slightly more aggressive
-
-def extract_raw_file_text(file_bytes, filename, mime_type):
-    extracted_text = ""
-    is_pdf = "pdf" in (mime_type or "").lower() or filename.lower().endswith(".pdf")
-    file_size_mb = len(file_bytes) / (1024 * 1024)
-
-    # Adaptive settings for larger files
-    ocr_pages = 4 if file_size_mb > 4 else MAX_OCR_PAGES
-    dpi = 120 if file_size_mb > 4 else 150
-    max_side = 1600 if file_size_mb > 4 else MAX_IMAGE_SIDE
-
-    if pytesseract is not None:
-        if sys.platform.startswith('win'):
-            pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
-
-    # 1. Prefer native PDF text (clean + short)
-    if is_pdf and pypdf is not None:
-        try:
-            pdf_reader = pypdf.PdfReader(io.BytesIO(file_bytes))
-            for page in pdf_reader.pages[:ocr_pages]:
-                t = page.extract_text()
-                if t:
-                    extracted_text += t + "\n"
-        except Exception:
-            pass
-
-    # 2. Fall back to OCR only when needed
-    if not extracted_text.strip():
-        if is_pdf and pdf2image is not None and pytesseract is not None:
-            try:
-                images = pdf2image.convert_from_bytes(
-                    file_bytes,
-                    first_page=1,
-                    last_page=ocr_pages,
-                    dpi=dpi,
-                    fmt="jpeg",               # much less memory than ppm
-                )
-                for img in images:
-                    w, h = img.size
-                    if max(w, h) > max_side:
-                        ratio = max_side / max(w, h)
-                        img = img.resize((int(w * ratio), int(h * ratio)), Image.LANCZOS)
-                    extracted_text += pytesseract.image_to_string(img) + "\n"
-            except Exception as e:
-                print(f"PDF OCR Error: {e}")
-        elif not is_pdf and pytesseract is not None:
-            try:
-                img = Image.open(io.BytesIO(file_bytes))
-                w, h = img.size
-                if max(w, h) > max_side:
-                    ratio = max_side / max(w, h)
-                    img = img.resize((int(w * ratio), int(h * ratio)), Image.LANCZOS)
-                extracted_text = pytesseract.image_to_string(img)
-            except Exception as e:
-                print(f"Image OCR Error: {e}")
-
-    # 3. Clean + hard truncate
-    extracted_text = re.sub(r"[ \t]+", " ", extracted_text)
-    extracted_text = re.sub(r"\n{3,}", "\n\n", extracted_text).strip()
-
-    if len(extracted_text) > MAX_REPORT_CHARS:
-        extracted_text = (
-            extracted_text[:MAX_REPORT_CHARS]
-            + "\n\n[Document truncated to the most relevant beginning portion to stay within token limits.]"
-        )
-
-    return extracted_text
-
-# ---------------------------------------------------------
-# GROQ AI LPU ENGINE (token-safe for large files)
-# ---------------------------------------------------------
-def analyze_report_with_groq(file_bytes, filename, mime_type, target_lang, target_diet, api_key):
-    try:
-        if Groq is None:
-            return None, "groq library not installed. Run: pip install groq"
-
-        # Soft limit only – we handle large files via page limits + truncation
-        if len(file_bytes) > 25 * 1024 * 1024:          # 25 MB absolute ceiling
-            return None, "File is larger than 25 MB. Please use a lower-resolution scan or fewer pages."
-
-        extracted_text = extract_raw_file_text(file_bytes, filename, mime_type)
-        if not extracted_text.strip():
-            return None, "Could not extract text from document. Please ensure it is a clear scan."
-
-        client = Groq(api_key=api_key.strip())
-
-        # Leaner prompt – every token counts on free tier
-        prompt = f"""You are an expert clinical laboratory analyst.
-Analyze this medical lab report text with maximum clinical precision.
-
---- REPORT TEXT ---
-{extracted_text}
---- END REPORT ---
-
-Target Language: {target_lang} (ALL text fields MUST be in {target_lang})
-Dietary Profile: {target_diet}
-
-STRICT RULES:
-1. Ignore Lab IDs, doctor numbers, invoices, addresses.
-2. Extract all clinical biomarkers (Glucose, HbA1c, Cholesterol, Triglycerides, Hemoglobin, Creatinine, Bilirubin, TSH, etc.).
-3. For each biomarker return:
-   - name, category, value, numeric_value, unit, ref_low, ref_high,
-   - status_code ("normal"|"high"|"low"), status, badge,
-   - explanation (simple biological meaning),
-   - food_remedies (Indian cuisine, {target_diet}),
-   - questions_for_doctor (2-3 specific questions)
-4. summary: 2-3 sentence overview.
-
-Return ONLY valid JSON:
-{{
-  "summary": "...",
-  "parameters": [
-    {{
-      "name": "...",
-      "category": "...",
-      "value": "...",
-      "numeric_value": 0 or null,
-      "unit": "...",
-      "ref_low": 0 or null,
-      "ref_high": 0 or null,
-      "status_code": "normal|high|low",
-      "status": "...",
-      "badge": "badge-attention|badge-normal",
-      "explanation": "...",
-      "food_remedies": "...",
-      "questions_for_doctor": ["...", "..."]
-    }}
-  ]
-}}
-"""
-
-        response = client.chat.completions.create(
-            model="openai/gpt-oss-120b",
-            messages=[
-                {"role": "system", "content": "You are a clinical diagnostic analysis engine. Respond strictly in valid JSON."},
-                {"role": "user", "content": prompt}
-            ],
-            response_format={"type": "json_object"},
-            temperature=0.1,
-            max_tokens=8192,
-        )
-
-        parsed_data = json.loads(response.choices[0].message.content)
-        return parsed_data, None
-
-    except Exception as e:
-        err = str(e).lower()
-        if "token" in err or "context" in err or "length" in err:
-            return None, (
-                "The report is too long for the current token budget. "
-                "Try a clearer scan of only the first few pages or a lower-resolution PDF."
-            )
-        return None, f"Groq Execution Error: {str(e)}"
-
-# ---------------------------------------------------------
-# Normalization & UI Builders
+# Helpers shared by the pipeline and the UI
 # ---------------------------------------------------------
 NUM_RE = r"-?\d+(?:\.\d+)?"
 
@@ -596,6 +439,250 @@ def to_float(v):
     except (TypeError, ValueError):
         return None
 
+# ---------------------------------------------------------
+# Document Text Extraction (page-wise, OCR only where needed)
+# ---------------------------------------------------------
+MODEL = "openai/gpt-oss-120b"   # swap stage 1 to "openai/gpt-oss-20b" if you need more quota headroom
+MAX_PAGES = 40                  # pages read per document
+CHUNK_CHARS = 9000              # ~2.5k tokens per extraction call
+OCR_DPI = 130
+MAX_SIDE = 1600
+MAX_FILE_MB = 25
+
+def _ocr_page(file_bytes, page_no):
+    """OCR a single PDF page (1-indexed). Rendering one page at a time keeps memory low."""
+    try:
+        imgs = pdf2image.convert_from_bytes(
+            file_bytes, first_page=page_no, last_page=page_no, dpi=OCR_DPI, fmt="jpeg"
+        )
+        img = imgs[0]
+        w, h = img.size
+        if max(w, h) > MAX_SIDE:
+            r = MAX_SIDE / max(w, h)
+            img = img.resize((int(w * r), int(h * r)), Image.LANCZOS)
+        return pytesseract.image_to_string(img)
+    except Exception as e:
+        print(f"OCR error p{page_no}: {e}")
+        return ""
+
+def extract_pages(file_bytes, filename, mime_type):
+    if pytesseract is not None and sys.platform.startswith("win"):
+        pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
+
+    is_pdf = "pdf" in (mime_type or "").lower() or filename.lower().endswith(".pdf")
+    pages = []
+
+    if is_pdf:
+        # 1. Native text layer (fast, clean)
+        if pypdf is not None:
+            try:
+                reader = pypdf.PdfReader(io.BytesIO(file_bytes))
+                for p in reader.pages[:MAX_PAGES]:
+                    pages.append(p.extract_text() or "")
+            except Exception:
+                pages = []
+        # 2. OCR only the pages that have no usable text layer
+        if pdf2image is not None and pytesseract is not None:
+            if not pages:   # pypdf failed entirely -> OCR blindly
+                pages = [""] * MAX_PAGES
+            todo = [i for i, t in enumerate(pages) if len(t.strip()) < 40]
+            if todo:
+                with ThreadPoolExecutor(max_workers=4) as ex:
+                    results = list(ex.map(lambda i: _ocr_page(file_bytes, i + 1), todo))
+                for i, txt in zip(todo, results):
+                    pages[i] = txt
+    elif pytesseract is not None:
+        try:
+            img = Image.open(io.BytesIO(file_bytes))
+            w, h = img.size
+            if max(w, h) > MAX_SIDE:
+                r = MAX_SIDE / max(w, h)
+                img = img.resize((int(w * r), int(h * r)), Image.LANCZOS)
+            pages = [pytesseract.image_to_string(img)]
+        except Exception as e:
+            print(f"Image OCR Error: {e}")
+    return pages
+
+NOISE = re.compile(
+    r"(page \d+|www\.|https?:|@|\bphone\b|\btel\b|\bfax\b|address|disclaimer|nabl|barcode|"
+    r"collected|registered|printed|reported on|end of report|lab id|sample id|reg\.? no|"
+    r"patient id|referred by|dr\.)", re.I)
+RANGE = re.compile(r"\d+(?:\.\d+)?\s*(?:-|–|to)\s*\d+(?:\.\d+)?|[<>≤≥]\s*\d")
+
+def condense(pages):
+    """Keep only lines likely to carry results; drop duplicates, paragraphs and boilerplate."""
+    seen, out = set(), []
+    for text in pages:
+        for line in text.splitlines():
+            line = re.sub(r"\s+", " ", line).strip()
+            if len(line) < 3:
+                continue
+            key = line.lower()
+            if key in seen:
+                continue
+            seen.add(key)
+            has_digit = any(c.isdigit() for c in line)
+            if has_digit:
+                if NOISE.search(line) and not RANGE.search(line):
+                    continue
+                out.append(line[:200])
+            elif len(line) <= 40:       # likely a test / section name on its own line
+                out.append(line)
+    return out
+
+def chunk_lines(lines, size=CHUNK_CHARS):
+    chunks, cur, n = [], [], 0
+    for ln in lines:
+        if n + len(ln) > size and cur:
+            chunks.append("\n".join(cur))
+            cur, n = [], 0
+        cur.append(ln)
+        n += len(ln) + 1
+    if cur:
+        chunks.append("\n".join(cur))
+    return chunks
+
+# ---------------------------------------------------------
+# GROQ LPU ENGINE (multi-stage, token-safe for large files)
+# ---------------------------------------------------------
+SYS = "You are a clinical lab analysis engine. Respond only with valid JSON."
+
+def call_groq(client, system, user, max_tokens, retries=5):
+    """One Groq call with JSON mode, low reasoning effort, and rate-limit-aware retries."""
+    last = None
+    for attempt in range(retries):
+        try:
+            r = client.chat.completions.create(
+                model=MODEL,
+                messages=[{"role": "system", "content": system},
+                          {"role": "user", "content": user}],
+                response_format={"type": "json_object"},
+                temperature=0.1,
+                max_tokens=max_tokens,
+                reasoning_effort="low",
+            )
+            return json.loads(r.choices[0].message.content)
+        except json.JSONDecodeError as e:
+            last = e
+        except Exception as e:
+            last = e
+            msg = str(e).lower()
+            if "429" in msg or "rate" in msg or "413" in msg:
+                m = re.search(r"try again in ([\d.]+)\s*(ms|s|m)\b", msg)
+                wait = 3 * (attempt + 1)
+                if m:
+                    v = float(m.group(1))
+                    wait = v / 1000 if m.group(2) == "ms" else v * 60 if m.group(2) == "m" else v
+                time.sleep(min(wait + 1, 40))
+                continue
+            raise
+    raise last
+
+def _status(item):
+    """Compute high/low/normal in Python from value + reference range (zero tokens)."""
+    v, lo, hi = to_float(item.get("v")), to_float(item.get("lo")), to_float(item.get("hi"))
+    if v is not None and (lo is not None or hi is not None):
+        if hi is not None and v > hi:
+            return "high"
+        if lo is not None and v < lo:
+            return "low"
+        return "normal"
+    return {"H": "high", "L": "low"}.get(str(item.get("f", "N")).upper(), "normal")
+
+def analyze_report_with_groq(file_bytes, filename, mime_type, target_lang, target_diet, api_key):
+    try:
+        if Groq is None:
+            return None, "groq library not installed. Run: pip install groq"
+        if not api_key or not api_key.strip():
+            return None, "GROQ_API_KEY not found. Add it to .streamlit/secrets.toml or set it as an environment variable."
+        if len(file_bytes) > MAX_FILE_MB * 1024 * 1024:
+            return None, f"File is larger than {MAX_FILE_MB} MB. Please use a lower-resolution scan."
+
+        pages = extract_pages(file_bytes, filename, mime_type)
+        lines = condense(pages)
+        if not lines:
+            return None, "Could not extract text from document. Please ensure it is a clear scan."
+
+        client = Groq(api_key=api_key.strip())
+
+        # ---- Stage 1: compact extraction, chunk by chunk ----
+        found, seen = [], set()
+        for chunk in chunk_lines(lines):
+            prompt = f"""Extract every lab test result from this report text.
+Return JSON: {{"r":[{{"n":"test name (English)","c":"category","v":number or null,"u":"unit","lo":number or null,"hi":number or null,"f":"H"|"L"|"N"}}]}}
+"f" = flag printed in the report (H/L/N). For ranges like "<200" use hi=200, lo=null.
+Ignore IDs, addresses, doctor names, notes. Never invent values.
+
+TEXT:
+{chunk}"""
+            data = call_groq(client, SYS, prompt, max_tokens=3000)
+            for it in data.get("r", []):
+                key = (str(it.get("n", "")).lower(), str(it.get("v")))
+                if it.get("n") and key not in seen:
+                    seen.add(key)
+                    found.append(it)
+
+        if not found:
+            return None, None   # UI shows the "no results" message
+
+        for it in found:
+            it["code"] = _status(it)
+
+        # ---- Stage 2: explanations only for abnormal biomarkers ----
+        abnormal = [i for i, it in enumerate(found) if it["code"] != "normal"]
+        batch_size = 8 if target_lang == "English" else 4   # Indic scripts cost more tokens
+        for s in range(0, len(abnormal), batch_size):
+            idxs = abnormal[s:s + batch_size]
+            items = [{"i": i, "n": found[i]["n"], "v": found[i].get("v"),
+                      "u": found[i].get("u"), "status": found[i]["code"]} for i in idxs]
+            prompt = f"""Language for ALL text values: {target_lang}. Diet: {target_diet} (Indian cuisine).
+For each abnormal lab result below return JSON:
+{{"items":[{{"i":<same index>,"e":"1-2 sentence simple explanation","f":"3-4 specific Indian {target_diet} food suggestions","q":["question 1","question 2"]}}]}}
+
+RESULTS:
+{json.dumps(items, ensure_ascii=False)}"""
+            out = call_groq(client, SYS, prompt,
+                            max_tokens=2500 if target_lang == "English" else 4000)
+            for e in out.get("items", []):
+                try:
+                    j = int(e.get("i"))
+                except (TypeError, ValueError):
+                    continue
+                if 0 <= j < len(found):
+                    found[j]["e"] = e.get("e", "")
+                    found[j]["fd"] = e.get("f", "")
+                    found[j]["q"] = e.get("q", [])
+
+        # ---- Summary (tiny call) ----
+        brief = [f'{it["n"]}: {it.get("v")} {it.get("u", "")} ({it["code"]})' for it in found]
+        sm = call_groq(
+            client, SYS,
+            f'Write a 2-3 sentence overview in {target_lang} of these lab results. '
+            f'Return {{"summary":"..."}}.\n' + "\n".join(brief[:80]),
+            max_tokens=600,
+        )
+
+        params = []
+        for it in found:
+            v, u = it.get("v"), it.get("u") or ""
+            params.append({
+                "name": it["n"], "category": it.get("c", ""),
+                "value": f"{v} {u}".strip() if v is not None else "",
+                "numeric_value": v, "unit": u,
+                "ref_low": it.get("lo"), "ref_high": it.get("hi"),
+                "status_code": it["code"],
+                "explanation": it.get("e", ""),
+                "food_remedies": it.get("fd", ""),
+                "questions_for_doctor": it.get("q", []),
+            })
+        return {"summary": sm.get("summary", ""), "parameters": params}, None
+
+    except Exception as e:
+        return None, f"Groq Execution Error: {e}"
+
+# ---------------------------------------------------------
+# Normalization & UI Builders
+# ---------------------------------------------------------
 def status_code_of(param) -> str:
     code = str(param.get("status_code", "")).strip().lower()
     if code in ("normal", "high", "low"):
@@ -834,9 +921,8 @@ else:
         file_bytes = uploaded_file.getvalue()
         mime_type = uploaded_file.type or "application/pdf"
 
-        # Soft warning for large files
         if uploaded_file.size > 6 * 1024 * 1024:
-            st.warning("Large file detected. Analysis will use only the first few pages / truncated text to stay within token limits.")
+            st.info("Large file detected. It will be processed in chunks, so this may take a minute.")
 
         cache_key = (
             hashlib.sha256(file_bytes).hexdigest(),
@@ -846,7 +932,7 @@ else:
         parsed_report_data = st.session_state.analysis_cache.get(cache_key)
 
         if parsed_report_data is None:
-            with st.spinner("Analyzing report biomarkers and clinical values with Groq..."):
+            with st.spinner("Reading report, extracting biomarkers and generating explanations..."):
                 parsed_report_data, error_notice = analyze_report_with_groq(
                     file_bytes, uploaded_file.name, mime_type,
                     st.session_state.selected_lang, st.session_state.selected_diet,
