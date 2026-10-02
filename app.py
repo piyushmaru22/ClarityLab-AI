@@ -26,6 +26,12 @@ try:
 except ImportError:
     pdfplumber = None
 
+# PyMuPDF Fallback (High-res text recovery)
+try:
+    import fitz
+except ImportError:
+    fitz = None
+
 # Secondary PDF Reader Fallback
 try:
     import pypdf
@@ -120,17 +126,6 @@ header[data-testid="stHeader"] { background: transparent !important; }
     0%, 100% { box-shadow: 0 0 12px rgba(255, 196, 0, 0.25); border-color: rgba(255, 196, 0, 0.4); } 
     50% { box-shadow: 0 0 28px rgba(255, 196, 0, 0.6); border-color: rgba(255, 196, 0, 0.9); } 
 }
-@keyframes scanline { 
-    0% { top: 0; opacity: 0; } 
-    15% { opacity: 1; } 
-    85% { opacity: 1; } 
-    100% { top: 100%; opacity: 0; } 
-}
-@keyframes dotPulse { 
-    0% { box-shadow: 0 0 0 0 rgba(0, 229, 255, 0.5); } 
-    70% { box-shadow: 0 0 0 12px rgba(0, 229, 255, 0); } 
-    100% { box-shadow: 0 0 0 0 rgba(0, 229, 255, 0); } 
-}
 
 .cl-title { font-size: 2.2rem; font-weight: 700; letter-spacing: -0.04em; margin: 0; background: linear-gradient(135deg, #ffffff 0%, #a3b1c6 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
 .cl-tagline { font-size: 1.05rem; color: var(--text-muted); margin-top: 4px; font-weight: 500; }
@@ -152,7 +147,7 @@ header[data-testid="stHeader"] { background: transparent !important; }
 .cl-logo img, .cl-logo svg { width: 44px; height: 44px; }
 
 .cl-chip { display: inline-flex; align-items: center; gap: 10px; padding: 8px 18px; border-radius: 999px; background: rgba(0, 229, 255, 0.05); border: 1px solid rgba(0, 229, 255, 0.3); font: 500 13px 'JetBrains Mono', monospace; color: var(--neon-cyan); box-shadow: 0 0 20px rgba(0, 229, 255, 0.1); backdrop-filter: blur(8px); }
-.cl-chip-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--neon-cyan); animation: dotPulse 2s infinite; }
+.cl-chip-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--neon-cyan); }
 
 .cl-prefs { display: flex; gap: 24px; flex-wrap: wrap; margin: 16px 0 8px; font-size: 0.95rem; color: var(--text-muted); }
 .cl-prefs strong { color: var(--text-main); font-weight: 600; padding: 4px 10px; background: rgba(255,255,255,0.05); border-radius: 6px; border: 1px solid rgba(255,255,255,0.1); }
@@ -161,10 +156,6 @@ header[data-testid="stHeader"] { background: transparent !important; }
     position: relative; overflow: hidden; background: var(--surface-glass) !important; 
     border: 1px dashed rgba(0, 229, 255, 0.4) !important; border-radius: 20px !important; 
     transition: all 0.3s var(--ease-out) !important; backdrop-filter: blur(12px); 
-}
-[data-testid="stFileUploaderDropzone"]:hover { 
-    border-color: var(--neon-cyan) !important; background: var(--surface-glass-hover) !important; 
-    box-shadow: 0 0 40px rgba(0, 229, 255, 0.15) !important; 
 }
 
 .metric-card, .food-card, .cl-summary, .ob-card, details.dq { 
@@ -181,19 +172,16 @@ header[data-testid="stHeader"] { background: transparent !important; }
 .metric-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px; margin-top: 12px; }
 .metric-card { padding: 26px; position: relative; overflow: hidden; display: flex; flex-direction: column; justify-content: space-between; }
 .metric-card.is-flagged { border-color: rgba(255, 23, 68, 0.35); background: linear-gradient(180deg, rgba(255, 23, 68, 0.04) 0%, transparent 100%), var(--surface-glass); }
-.metric-card.is-flagged:hover { box-shadow: 0 20px 50px rgba(255, 23, 68, 0.15); border-color: rgba(255, 23, 68, 0.7); }
 .metric-card.is-low { border-color: rgba(255, 196, 0, 0.35); background: linear-gradient(180deg, rgba(255, 196, 0, 0.04) 0%, transparent 100%), var(--surface-glass); }
-.metric-card.is-low:hover { box-shadow: 0 20px 50px rgba(255, 196, 0, 0.15); border-color: rgba(255, 196, 0, 0.7); }
 
-.flag-bar { position: absolute; top: 0; left: 0; right: 0; height: 4px; background: var(--neon-coral); box-shadow: 0 0 15px var(--neon-coral); }
-.metric-card.is-low .flag-bar { background: var(--neon-amber); box-shadow: 0 0 15px var(--neon-amber); }
+.flag-bar { position: absolute; top: 0; left: 0; right: 0; height: 4px; background: var(--neon-coral); }
+.metric-card.is-low .flag-bar { background: var(--neon-amber); }
 
 .metric-head { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; gap: 12px; }
 .metric-cat { font: 600 11px/1.2 'JetBrains Mono', monospace; letter-spacing: 0.18em; text-transform: uppercase; color: var(--text-muted); margin: 0 0 6px; }
 .metric-name { font-size: 1.15rem; font-weight: 600; margin: 0; color: var(--text-main); }
 .metric-value { display: flex; align-items: baseline; gap: 8px; margin: 0 0 4px; }
-
-.metric-number { font: 700 3.6rem/1 'JetBrains Mono', monospace; color: var(--text-main); text-shadow: 0 4px 24px rgba(255,255,255,0.15); }
+.metric-number { font: 700 3.6rem/1 'JetBrains Mono', monospace; color: var(--text-main); }
 .metric-card.is-flagged .metric-number { color: var(--neon-coral); text-shadow: 0 4px 24px rgba(255, 23, 68, 0.4); }
 .metric-card.is-low .metric-number { color: var(--neon-amber); text-shadow: 0 4px 24px rgba(255, 196, 0, 0.4); }
 .metric-unit { font: 500 1.1rem 'JetBrains Mono', monospace; color: var(--text-muted); }
@@ -203,17 +191,16 @@ header[data-testid="stHeader"] { background: transparent !important; }
 .range-track { height: 8px; background: rgba(255,255,255,0.06); border-radius: 999px; position: relative; overflow: visible; }
 .range-safe { position: absolute; top: 0; bottom: 0; background: rgba(0, 230, 118, 0.25); border-radius: 999px; border: 1px solid rgba(0, 230, 118, 0.5); }
 .range-marker { position: absolute; top: 50%; width: 18px; height: 18px; transform: translate(-50%, -50%); border-radius: 50%; background: var(--neon-emerald); box-shadow: 0 0 16px var(--neon-emerald), inset 0 0 0 4px var(--bg-deep); z-index: 2; }
-.metric-card.is-flagged .range-marker { background: var(--neon-coral); box-shadow: 0 0 16px var(--neon-coral), inset 0 0 0 4px var(--bg-deep); }
-.metric-card.is-low .range-marker { background: var(--neon-amber); box-shadow: 0 0 16px var(--neon-amber), inset 0 0 0 4px var(--bg-deep); }
+.metric-card.is-flagged .range-marker { background: var(--neon-coral); }
+.metric-card.is-low .range-marker { background: var(--neon-amber); }
 .range-labels { display: flex; justify-content: space-between; font: 500 12px 'JetBrains Mono', monospace; color: var(--text-muted); }
 
 .metric-explain { padding-top: 18px; margin-top: 18px; border-top: 1px dashed rgba(255,255,255,0.1); font-size: 0.98rem; line-height: 1.6; color: rgba(255,255,255,0.85); margin-bottom: 0; }
 .metric-explain strong { color: var(--text-main); font-weight: 600; display: block; margin-bottom: 6px; }
 
 .pill { display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px; border-radius: 999px; font: 700 11px/1 'JetBrains Mono', monospace; letter-spacing: 0.12em; text-transform: uppercase; white-space: nowrap; border: 1px solid transparent; }
-.pill svg { width: 14px; height: 14px; }
-.pill-dot { position: relative; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
-.pill-normal { background: rgba(0, 230, 118, 0.12); color: var(--neon-emerald); border-color: rgba(0, 230, 118, 0.4); box-shadow: 0 0 15px rgba(0, 230, 118, 0.15); }
+.pill-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.pill-normal { background: rgba(0, 230, 118, 0.12); color: var(--neon-emerald); border-color: rgba(0, 230, 118, 0.4); }
 .pill-high { background: rgba(255, 23, 68, 0.12); color: var(--neon-coral); animation: breatheCoral 2.5s ease-in-out infinite; }
 .pill-low { background: rgba(255, 196, 0, 0.12); color: var(--neon-amber); animation: breatheAmber 2.5s ease-in-out infinite; }
 
@@ -223,8 +210,8 @@ header[data-testid="stHeader"] { background: transparent !important; }
 .cl-stat { flex: 1; min-width: 150px; background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.06); padding: 22px; border-radius: 18px; display: flex; flex-direction: column; gap: 10px; }
 .cl-stat-label { font: 600 12px 'JetBrains Mono', monospace; letter-spacing: 0.18em; text-transform: uppercase; color: var(--text-muted); }
 .cl-stat-value { font: 700 2.8rem/1 'JetBrains Mono', monospace; color: var(--text-main); }
-.cl-stat-normal .cl-stat-value { color: var(--neon-emerald); text-shadow: 0 0 20px rgba(0,230,118,0.3); }
-.cl-stat-flagged .cl-stat-value { color: var(--neon-coral); text-shadow: 0 0 20px rgba(255,23,68,0.3); }
+.cl-stat-normal .cl-stat-value { color: var(--neon-emerald); }
+.cl-stat-flagged .cl-stat-value { color: var(--neon-coral); }
 .cl-flag-tag { background: rgba(255,23,68,0.15); color: var(--neon-coral); padding: 8px 14px; border-radius: 10px; font-weight: 600; font-size: 0.9rem; border: 1px solid rgba(255,23,68,0.3); }
 .cl-flag-list { display: flex; gap: 12px; flex-wrap: wrap; }
 
@@ -234,15 +221,12 @@ header[data-testid="stHeader"] { background: transparent !important; }
 .food-body { font-size: 1.05rem; line-height: 1.8; color: rgba(255,255,255,0.85); margin: 0; white-space: pre-line; }
 
 .dq-list { display: flex; flex-direction: column; gap: 14px; margin-top: 16px; }
-details.dq { margin-bottom: 0; }
 details.dq > summary { padding: 22px 26px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; list-style: none; gap: 16px; }
 details.dq > summary::-webkit-details-marker { display: none; }
-details.dq[open] { border-color: rgba(0, 229, 255, 0.4); box-shadow: 0 12px 32px rgba(0, 229, 255, 0.15); background: rgba(0, 229, 255, 0.03); }
+details.dq[open] { border-color: rgba(0, 229, 255, 0.4); background: rgba(0, 229, 255, 0.03); }
 .dq-left { display: flex; align-items: center; gap: 16px; }
 .dq-count { background: rgba(0, 229, 255, 0.15); color: var(--neon-cyan); border: 1px solid rgba(0,229,255,0.3); width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border-radius: 10px; font: 700 15px 'JetBrains Mono', monospace; }
 .dq-name { font-size: 1.15rem; font-weight: 600; color: var(--text-main); }
-.dq-right { display: flex; align-items: center; gap: 16px; }
-.dq-chev { width: 22px; height: 22px; color: var(--text-muted); }
 .dq-body { padding: 0 26px 26px; }
 .dq-body ol { list-style: none; counter-reset: q; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 14px; }
 .dq-body li { counter-increment: q; background: rgba(0,0,0,0.3); border: 1px solid var(--border-glass); padding: 18px 20px; border-radius: 14px; font-size: 1.05rem; color: rgba(255,255,255,0.9); display: flex; gap: 18px; line-height: 1.6; }
@@ -339,17 +323,29 @@ TEXTS = {
 L = TEXTS[st.session_state.selected_lang]
 
 # ---------------------------------------------------------
-# Reliable Raw Document Extractor (Preserves Tables)
+# Multi-Engine Text Recovery (Handles Compressed Scans)
 # ---------------------------------------------------------
 def extract_pages_text(file_bytes: bytes, filename: str, mime_type: str) -> list[str]:
     pages_text = []
     is_pdf = "pdf" in mime_type.lower() or filename.lower().endswith(".pdf")
 
     if is_pdf:
-        if pdfplumber is not None:
+        # Engine 1: PyMuPDF (fastest & handles compressed vector streams)
+        if fitz is not None:
+            try:
+                doc = fitz.open(stream=file_bytes, filetype="pdf")
+                for page in doc:
+                    txt = page.get_text("text") or ""
+                    if txt.strip():
+                        pages_text.append(txt.strip())
+            except Exception as e:
+                print(f"PyMuPDF error: {e}")
+
+        # Engine 2: pdfplumber (table layout preservation)
+        if not pages_text and pdfplumber is not None:
             try:
                 with pdfplumber.open(io.BytesIO(file_bytes)) as pdf:
-                    for idx, page in enumerate(pdf.pages):
+                    for page in pdf.pages:
                         page_text = page.extract_text(layout=True) or ""
                         tables = page.extract_tables()
                         if tables:
@@ -361,22 +357,12 @@ def extract_pages_text(file_bytes: bytes, filename: str, mime_type: str) -> list
                                         table_lines.append(" | ".join(cleaned))
                             if table_lines:
                                 page_text += "\n" + "\n".join(table_lines)
-
-                        if len(page_text.strip()) < 80 and pdf2image is not None and pytesseract is not None:
-                            try:
-                                images = pdf2image.convert_from_bytes(file_bytes, first_page=idx+1, last_page=idx+1)
-                                if images:
-                                    ocr_txt = pytesseract.image_to_string(images[0], config="--psm 6")
-                                    if len(ocr_txt.strip()) > len(page_text.strip()):
-                                        page_text = ocr_txt
-                            except Exception:
-                                pass
-
                         if page_text.strip():
                             pages_text.append(page_text.strip())
             except Exception as e:
                 print(f"pdfplumber error: {e}")
 
+        # Engine 3: pypdf fallback
         if not pages_text and pypdf is not None:
             try:
                 reader = pypdf.PdfReader(io.BytesIO(file_bytes))
@@ -387,10 +373,11 @@ def extract_pages_text(file_bytes: bytes, filename: str, mime_type: str) -> list
             except Exception:
                 pass
 
+        # Engine 4: OCR fallback for raster PDFs
         if not pages_text and pdf2image is not None and pytesseract is not None:
             try:
-                all_images = pdf2image.convert_from_bytes(file_bytes)
-                for img in all_images:
+                images = pdf2image.convert_from_bytes(file_bytes)
+                for img in images:
                     t = pytesseract.image_to_string(img, config="--psm 6")
                     if t.strip():
                         pages_text.append(t.strip())
@@ -398,6 +385,7 @@ def extract_pages_text(file_bytes: bytes, filename: str, mime_type: str) -> list
                 pass
 
     else:
+        # Standalone images (PNG, JPG)
         if pytesseract is not None:
             try:
                 img = Image.open(io.BytesIO(file_bytes))
@@ -410,7 +398,7 @@ def extract_pages_text(file_bytes: bytes, filename: str, mime_type: str) -> list
     return pages_text
 
 # ---------------------------------------------------------
-# Dynamic Model Caller
+# Dynamic Model Caller & Safe JSON Extractor
 # ---------------------------------------------------------
 def clean_json_response(content: str) -> dict:
     cleaned = content.strip()
@@ -427,10 +415,6 @@ def clean_json_response(content: str) -> dict:
         raise
 
 def call_ai_safe(client, messages, response_format=None, temperature=0.1):
-    """
-    Calls Groq using currently live, verified production models.
-    Catches 413, 400 decommissioned, and 404 models gracefully with backoff.
-    """
     candidate_models = [
         "llama-3.3-70b-versatile",
         "llama-3.1-8b-instant",
@@ -452,12 +436,12 @@ def call_ai_safe(client, messages, response_format=None, temperature=0.1):
                 last_err = e
                 err_msg = str(e).lower()
                 if "rate" in err_msg or "tpm" in err_msg or "413" in err_msg:
-                    time.sleep(2.0)  # Wait for token minute bucket reset
+                    time.sleep(1.5)
                     continue
                 if any(k in err_msg for k in ["not exist", "decommissioned", "model_not_found", "404", "400"]):
-                    break  # Jump to next model
+                    break
                 break
-    raise last_err or RuntimeError("Unable to communicate with the Diagnostic AI Engine.")
+    raise last_err or RuntimeError("AI inference engine unreachable.")
 
 # ---------------------------------------------------------
 # Two-Stage Extraction & Micro-Batched Enrichment
@@ -469,14 +453,18 @@ def analyze_report_with_ai(file_bytes, filename, mime_type, target_lang, target_
 
         pages = extract_pages_text(file_bytes, filename, mime_type)
         if not pages:
-            return None, "Could not extract readable text from document. Ensure scans are clear."
+            return None, (
+                "Document text could not be read. If this is a scanned/compressed image PDF, "
+                "please ensure it contains selectable text or install PyMuPDF (fitz) / Tesseract OCR."
+            )
 
         client = Groq(api_key=api_key.strip())
 
-        # STAGE 1: Page-by-page extraction (prevents prompt token overflow)
+        # STAGE 1: Resilient laboratory row extraction
         stage1_prompt = """
-You are a medical laboratory data extractor.
-Extract EVERY clinical test, value, and reference range from the text into this exact JSON schema:
+You are an expert clinical laboratory data extraction engine.
+Carefully inspect the provided text and extract EVERY laboratory test, observed result, and reference interval.
+Output strictly valid JSON with this exact schema:
 {
   "parameters": [
     {
@@ -490,18 +478,21 @@ Extract EVERY clinical test, value, and reference range from the text into this 
     }
   ]
 }
-If interval is "< 150", set ref_low: 0, ref_high: 150. If non-numeric (e.g. Negative/Positive), set numeric_value: null.
+Rules:
+- DO NOT skip any rows.
+- If reference interval is "< 150", set ref_low: 0, ref_high: 150.
+- If qualitative (e.g., Negative, Non-Reactive, Nil, Clear), set numeric_value: null.
 """
         all_extracted_params = []
         for idx, page_text in enumerate(pages):
-            if len(page_text.strip()) < 20:
+            if len(page_text.strip()) < 15:
                 continue
             try:
                 response = call_ai_safe(
                     client=client,
                     messages=[
-                        {"role": "system", "content": "You are a clinical extraction engine. Respond strictly in valid JSON."},
-                        {"role": "user", "content": f"{stage1_prompt}\n\n--- DOCUMENT PAGE {idx+1} ---\n{page_text}"}
+                        {"role": "system", "content": "You are a clinical diagnostic extraction engine. Respond strictly in valid JSON."},
+                        {"role": "user", "content": f"{stage1_prompt}\n\n--- DOCUMENT TEXT ---\n{page_text}"}
                     ],
                     response_format={"type": "json_object"},
                     temperature=0.0
@@ -511,11 +502,14 @@ If interval is "< 150", set ref_low: 0, ref_high: 150. If non-numeric (e.g. Nega
                 if isinstance(params, list):
                     all_extracted_params.extend(params)
             except Exception as e:
-                print(f"Error extracting page {idx+1}: {e}")
-            time.sleep(0.5)
+                print(f"Extraction error on page {idx+1}: {e}")
+            time.sleep(0.4)
 
         if not all_extracted_params:
-            return None, "No medical parameters could be found. Please ensure the document contains clinical test rows."
+            return None, (
+                f"Extracted {len(pages)} page(s) of raw text, but the AI could not locate any medical test rows. "
+                "Please verify that the file contains lab values."
+            )
 
         # Deduplicate
         unique_params = {}
@@ -557,27 +551,25 @@ If interval is "< 150", set ref_low: 0, ref_high: 150. If non-numeric (e.g. Nega
             if code in ("high", "low"):
                 flagged_params.append(p)
 
-        # STAGE 2: Micro-Batched Enrichment
-        # Enriching abnormal biomarkers in chunks of 3 guarantees output tokens never cap out
+        # STAGE 2: Micro-Batched Enrichment (Prevents Max Token Cutoffs)
         flagged_enriched = {}
         batch_size = 3
         for i in range(0, len(flagged_params), batch_size):
             batch = flagged_params[i:i + batch_size]
             prompt = f"""
 Translate and explain these abnormal biomarkers for a patient:
-- Language: {target_lang}
-- Diet Preference: {target_diet}
+- Target Language: {target_lang}
+- Dietary Preference: {target_diet}
 
-Biomarkers:
+Abnormal Parameters:
 {json.dumps([{"name": b["name"], "observed": b.get("raw_value") or b.get("numeric_value"), "status": b["status_code"]} for b in batch], ensure_ascii=False)}
 
 Return JSON:
 {{
   "details": [
     {{
-      "name": "biomarker name translated to {target_lang}",
       "original_key": "original name from input",
-      "explanation": "clear biological meaning in {target_lang}",
+      "explanation": "clear biological explanation in {target_lang}",
       "food_remedies": "realistic Indian {target_diet} food solution in {target_lang}",
       "questions_for_doctor": ["question 1 in {target_lang}", "question 2 in {target_lang}"]
     }}
@@ -588,7 +580,7 @@ Return JSON:
                 enrich_resp = call_ai_safe(
                     client=client,
                     messages=[
-                        {"role": "system", "content": "You are a clinical dietitian and consultant. Respond strictly in valid JSON."},
+                        {"role": "system", "content": "You are a clinical consultant. Respond strictly in valid JSON."},
                         {"role": "user", "content": prompt}
                     ],
                     response_format={"type": "json_object"},
@@ -596,13 +588,14 @@ Return JSON:
                 )
                 edata = clean_json_response(enrich_resp.choices[0].message.content)
                 for item in edata.get("details", []):
-                    k = item.get("original_key", item.get("name", "")).strip().lower()
-                    flagged_enriched[k] = item
+                    k = item.get("original_key", "").strip().lower()
+                    if k:
+                        flagged_enriched[k] = item
             except Exception as e:
                 print(f"Batch enrichment error: {e}")
-            time.sleep(0.6)
+            time.sleep(0.5)
 
-        # Merge enrichments back into biomarkers
+        # Attach Enrichment Data
         for p in processed_params:
             p_key = p["name"].strip().lower()
             matched = flagged_enriched.get(p_key)
@@ -623,13 +616,13 @@ Return JSON:
 
         summary_text = (
             f"Successfully analyzed {len(processed_params)} biomarkers. "
-            f"{len(flagged_params)} parameter(s) fall outside reference intervals."
+            f"{len(flagged_params)} parameter(s) fall outside normal reference bounds."
         )
 
         return {
             "summary": summary_text,
             "parameters": processed_params,
-            "questions": ["Are there any lifestyle or medication adjustments required based on these results?"]
+            "questions": ["What follow-up blood tests or lifestyle adjustments do you advise?"]
         }, None
 
     except Exception as e:
@@ -729,7 +722,7 @@ def metric_card(b: dict, index: int) -> str:
         explain = f'<p class="metric-explain"><strong>{esc(L["what_happening"])}</strong>{esc(b["explanation"])}</p>'
 
     return f"""
-    <article class="metric-card {state_cls}" style="animation-delay:{index * 40}ms">
+    <article class="metric-card {state_cls}" style="animation-delay:{index * 30}ms">
         {flag_bar}
         <header class="metric-head">
             <div>{category}<h3 class="metric-name">{esc(b["name"])}</h3></div>
@@ -767,7 +760,7 @@ def question_accordion(title: str, questions: list, code, is_open: bool, index: 
     items = "".join(f"<li>{esc(q)}</li>" for q in questions)
     pill = status_pill(code) if code else ""
     return f"""
-    <details class="dq" {'open' if is_open else ''} style="animation-delay:{index * 40}ms">
+    <details class="dq" {'open' if is_open else ''} style="animation-delay:{index * 30}ms">
         <summary>
             <span class="dq-left"><span class="dq-count">{len(questions)}</span><span class="dq-name">{esc(title)}</span></span>
             <span class="dq-right">{pill}</span>
@@ -777,7 +770,7 @@ def question_accordion(title: str, questions: list, code, is_open: bool, index: 
     """
 
 # ---------------------------------------------------------
-# STEP 1: Language Selection
+# STEP 1: Onboarding - Language Selection
 # ---------------------------------------------------------
 LANG_OPTIONS = ["English", "हिंदी", "ગુજરાતી"]
 
@@ -804,7 +797,7 @@ if st.session_state.onboarding_step == 1:
             st.rerun()
 
 # ---------------------------------------------------------
-# STEP 2: Dietary Preference
+# STEP 2: Onboarding - Dietary Preference
 # ---------------------------------------------------------
 elif st.session_state.onboarding_step == 2:
     _, center, _ = st.columns([1, 1.6, 1])
@@ -829,7 +822,7 @@ elif st.session_state.onboarding_step == 2:
             st.rerun()
 
 # ---------------------------------------------------------
-# STEP 3: Main Dashboard
+# STEP 3: Main Medical Dashboard
 # ---------------------------------------------------------
 else:
     head_col, action_col = st.columns([4, 1], vertical_alignment="center")
@@ -889,7 +882,7 @@ else:
         parsed_report_data = st.session_state.analysis_cache.get(cache_key)
 
         if parsed_report_data is None:
-            with st.spinner("Analyzing laboratory document with Groq LPU engine..."):
+            with st.spinner("Extracting parameters and analyzing report with Groq LPUs..."):
                 parsed_report_data, error_notice = analyze_report_with_ai(
                     file_bytes, uploaded_file.name, mime_type,
                     st.session_state.selected_lang, st.session_state.selected_diet,
@@ -905,7 +898,7 @@ else:
             render_html(f'<div class="cl-empty" style="margin-top:20px;">{esc(L["no_results"])}</div>')
 
     # -----------------------------------------------------
-    # Render Diagnostic Results
+    # Render Results
     # -----------------------------------------------------
     if parsed_report_data:
         biomarkers = [normalise(p) for p in parsed_report_data.get("parameters", [])]
@@ -932,7 +925,7 @@ else:
         with tab_food:
             food_cards = "".join(
                 f"""
-                <article class="food-card" style="animation-delay:{i * 50}ms">
+                <article class="food-card" style="animation-delay:{i * 30}ms">
                     <header class="food-head"><h3 class="food-title">{esc(b['name'])}</h3>{status_pill(b['code'])}</header>
                     <p class="food-body">{esc(b['food'])}</p>
                 </article>
@@ -948,10 +941,6 @@ else:
 
         with tab_doc:
             groups = [(b["name"], b["questions"], b["code"]) for b in biomarkers_sorted if b["questions"]]
-            top_level = parsed_report_data.get("questions") or []
-            if not groups and top_level:
-                groups = [(L["general_questions"], top_level, None)]
-
             if groups:
                 accordions = "".join(
                     question_accordion(title, qs, code, is_open=(i == 0), index=i)
