@@ -12,12 +12,17 @@ import streamlit as st
 from PIL import Image
 
 # ---------------------------------------------------------
-# Third-Party Parsers & Clients
+# Third-Party Parsers & AI Clients
 # ---------------------------------------------------------
 try:
     from groq import Groq
 except ImportError:
     Groq = None
+
+try:
+    from openai import OpenAI
+except ImportError:
+    OpenAI = None
 
 # Primary Table-Aware PDF Reader
 try:
@@ -43,18 +48,6 @@ try:
     import pdf2image
 except ImportError:
     pdf2image = None
-
-# ---------------------------------------------------------
-# Model Registry & Fallback Hierarchy
-# ---------------------------------------------------------
-# openai/gpt-oss-120b alongside top open-weight models for extraction & reasoning
-MODEL_ROSTER = [
-    "openai/gpt-oss-120b",
-    "deepseek-r1-distill-llama-70b",
-    "llama-3.3-70b-versatile",
-    "qwen/qwen-2.5-72b-instruct",
-    "llama-3.1-8b-instant",
-]
 
 # ---------------------------------------------------------
 # Page Configuration
@@ -548,13 +541,13 @@ def clean_json_response(content: str) -> dict:
             return json.loads(cleaned[start:end+1])
         raise
 
-def call_ai_with_fallback(client, messages, response_format=None, temperature=0.1):
+def call_ai_with_fallback(client, messages, candidate_models, response_format=None, temperature=0.1):
     """
-    Cycles sequentially through candidate models (openai/gpt-oss-120b, DeepSeek-R1, Llama-3.3, Qwen-2.5)
-    to guarantee reliable execution regardless of single model outages or rate quotas.
+    Cycles sequentially through candidate models to guarantee reliable execution.
+    Automatically handles rate limits, deprecated IDs, and 404 model errors.
     """
-    last_exception = None
-    for model_name in MODEL_ROSTER:
+    last_err = None
+    for model_name in candidate_models:
         try:
             kwargs = {
                 "model": model_name,
@@ -565,26 +558,50 @@ def call_ai_with_fallback(client, messages, response_format=None, temperature=0.
                 kwargs["response_format"] = response_format
             return client.chat.completions.create(**kwargs)
         except Exception as e:
-            last_exception = e
-            err_str = str(e).lower()
-            if any(k in err_str for k in ["rate", "tpm", "rpm", "not found", "decommissioned", "invalid_request_error"]):
+            last_err = e
+            err_msg = str(e).lower()
+            if any(k in err_msg for k in ["not exist", "model_not_found", "404", "rate", "tpm", "quota", "invalid_request_error"]):
                 continue
-            continue
-    raise last_exception or RuntimeError("All model roster candidates failed to respond.")
+            raise e
+
+    raise last_err or RuntimeError("All candidate models failed to return a response.")
 
 # ---------------------------------------------------------
-# AI LPU ENGINE (Two-Stage Chunked Extraction & Enrichment)
+# Adaptive AI Diagnostic Pipeline
 # ---------------------------------------------------------
-def analyze_report_with_groq(file_bytes, filename, mime_type, target_lang, target_diet, api_key):
+def analyze_report_with_ai(file_bytes, filename, mime_type, target_lang, target_diet, api_key):
     try:
-        if Groq is None:
-            return None, "groq library not installed. Run: pip install groq"
-
         pages = extract_pages_text(file_bytes, filename, mime_type)
         if not pages:
             return None, "Could not extract readable text from document. Ensure scans are legible and oriented correctly."
 
-        client = Groq(api_key=api_key.strip())
+        key = api_key.strip()
+        is_openrouter = key.startswith("sk-or-")
+
+        if is_openrouter:
+            if OpenAI is None:
+                return None, "openai library not installed for universal router. Run: pip install openai"
+            client = OpenAI(
+                base_url="[https://openrouter.ai/api/v1](https://openrouter.ai/api/v1)",
+                api_key=key,
+            )
+            # Full model slugs for OpenRouter / universal endpoints
+            candidate_models = [
+                "openai/gpt-oss-120b",
+                "deepseek/deepseek-r1",
+                "meta-llama/llama-3.3-70b-instruct",
+                "qwen/qwen-2.5-72b-instruct",
+            ]
+        else:
+            if Groq is None:
+                return None, "groq library not installed. Run: pip install groq"
+            client = Groq(api_key=key)
+            # Verified production Groq model IDs
+            candidate_models = [
+                "llama-3.3-70b-versatile",
+                "mixtral-8x7b-32768",
+                "gemma2-9b-it",
+            ]
 
         # STAGE 1: Extract all parameters per 2-page chunk
         chunk_size = 2
@@ -625,6 +642,7 @@ JSON Format:
                     {"role": "system", "content": "You are a clinical diagnostic extraction engine. Respond strictly in valid JSON."},
                     {"role": "user", "content": f"{stage1_prompt}\n\n--- REPORT CHUNK (Part {chunk_idx+1}/{len(chunks)}) ---\n{chunk_text}"}
                 ],
+                candidate_models=candidate_models,
                 response_format={"type": "json_object"},
                 temperature=0.0
             )
@@ -639,14 +657,15 @@ JSON Format:
         if not all_extracted_params:
             return None, "No medical parameters could be extracted. Please ensure the document contains clinical test rows."
 
+        # Deduplicate tests by normalized name
         unique_params = {}
         for p in all_extracted_params:
             name = str(p.get("name", "")).strip()
             if not name:
                 continue
-            key = name.lower()
-            if key not in unique_params:
-                unique_params[key] = p
+            k = name.lower()
+            if k not in unique_params:
+                unique_params[k] = p
 
         # Mathematical Validation (Python Bounds Checking)
         processed_params = []
@@ -728,6 +747,7 @@ Output strictly valid JSON matching this schema:
                     {"role": "system", "content": "You are a medical consultant. Respond strictly in valid JSON."},
                     {"role": "user", "content": stage2_prompt}
                 ],
+                candidate_models=candidate_models,
                 response_format={"type": "json_object"},
                 temperature=0.2
             )
@@ -998,13 +1018,13 @@ else:
     </div>
     """)
 
-    # Retrieve API Key securely
-    groq_api_key = ""
+    # Retrieve API Key securely from secrets or environment
+    api_key = ""
     try:
-        groq_api_key = st.secrets.get("GROQ_API_KEY", "")
+        api_key = st.secrets.get("GROQ_API_KEY", "") or st.secrets.get("OPENROUTER_API_KEY", "")
     except Exception:
         pass
-    groq_api_key = groq_api_key or os.environ.get("GROQ_API_KEY", "")
+    api_key = api_key or os.environ.get("GROQ_API_KEY", "") or os.environ.get("OPENROUTER_API_KEY", "")
 
     render_html(f"""
     <div style="margin-top:20px">
@@ -1030,10 +1050,10 @@ else:
 
         if parsed_report_data is None:
             with st.spinner("Extracting parameters and analyzing report with Diagnostic Engine..."):
-                parsed_report_data, error_notice = analyze_report_with_groq(
+                parsed_report_data, error_notice = analyze_report_with_ai(
                     file_bytes, uploaded_file.name, mime_type,
                     st.session_state.selected_lang, st.session_state.selected_diet,
-                    groq_api_key
+                    api_key
                 )
 
             if parsed_report_data:
