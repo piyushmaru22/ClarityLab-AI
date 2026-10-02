@@ -7,7 +7,6 @@ import re
 import textwrap
 import sys
 import base64
-
 import streamlit as st
 from PIL import Image
 
@@ -22,12 +21,10 @@ try:
     import pypdf
 except ImportError:
     pypdf = None
-
 try:
     import pytesseract
 except ImportError:
     pytesseract = None
-
 try:
     import pdf2image
 except ImportError:
@@ -55,7 +52,6 @@ def esc(value) -> str:
 THEME_CSS = """
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
-
 :root {
     --bg-deep: #050914;
     --surface-glass: rgba(15, 21, 35, 0.45);
@@ -70,12 +66,10 @@ THEME_CSS = """
     --ease-spring: cubic-bezier(0.175, 0.885, 0.32, 1.275);
     --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
 }
-
 /* Global Body & Background */
 html, body, .stApp, [class*="css"], .stMarkdown, button, input, label {
     font-family: 'Space Grotesk', -apple-system, BlinkMacSystemFont, sans-serif !important;
 }
-
 .stApp { 
     background: var(--bg-deep) !important; 
     color: var(--text-main); 
@@ -89,10 +83,8 @@ html, body, .stApp, [class*="css"], .stMarkdown, button, input, label {
     z-index: -1; 
     pointer-events: none; 
 }
-
 header[data-testid="stHeader"] { background: transparent !important; }
 .block-container { max-width: 1200px; padding-top: 2rem !important; padding-bottom: 4rem !important; }
-
 /* Micro-Animations */
 @keyframes cardRise { 
     from { opacity: 0; transform: translateY(24px) scale(0.98); } 
@@ -121,17 +113,14 @@ header[data-testid="stHeader"] { background: transparent !important; }
     70% { box-shadow: 0 0 0 12px rgba(0, 229, 255, 0); } 
     100% { box-shadow: 0 0 0 0 rgba(0, 229, 255, 0); } 
 }
-
 /* Headings & Typography */
 .cl-title { font-size: 2.2rem; font-weight: 700; letter-spacing: -0.04em; margin: 0; background: linear-gradient(135deg, #ffffff 0%, #a3b1c6 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
 .cl-tagline { font-size: 1.05rem; color: var(--text-muted); margin-top: 4px; font-weight: 500; }
 .cl-h2 { font-size: 1.6rem; font-weight: 700; letter-spacing: -0.03em; color: var(--text-main); margin-bottom: 8px; }
 .cl-eyebrow { font: 600 12px/1 'JetBrains Mono', monospace; letter-spacing: 0.2em; text-transform: uppercase; color: var(--neon-cyan); margin-bottom: 8px; }
-
 /* Header & Ribbons */
 .cl-header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 24px; border-bottom: 1px solid var(--border-glass); margin-bottom: 24px; flex-wrap: wrap; gap: 20px; }
 .cl-brand { display: flex; align-items: center; gap: 20px; }
-
 /* STUNNING 3D LOGO CONTAINER */
 .cl-logo { 
     width: 60px; height: 60px; 
@@ -143,14 +132,11 @@ header[data-testid="stHeader"] { background: transparent !important; }
     backdrop-filter: blur(12px);
 }
 .cl-logo img, .cl-logo svg { width: 44px; height: 44px; }
-
 /* Status Chip */
 .cl-chip { display: inline-flex; align-items: center; gap: 10px; padding: 8px 18px; border-radius: 999px; background: rgba(0, 229, 255, 0.05); border: 1px solid rgba(0, 229, 255, 0.3); font: 500 13px 'JetBrains Mono', monospace; color: var(--neon-cyan); box-shadow: 0 0 20px rgba(0, 229, 255, 0.1); backdrop-filter: blur(8px); }
 .cl-chip-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--neon-cyan); animation: dotPulse 2s infinite; }
-
 .cl-prefs { display: flex; gap: 24px; flex-wrap: wrap; margin: 16px 0 8px; font-size: 0.95rem; color: var(--text-muted); }
 .cl-prefs strong { color: var(--text-main); font-weight: 600; padding: 4px 10px; background: rgba(255,255,255,0.05); border-radius: 6px; border: 1px solid rgba(255,255,255,0.1); }
-
 /* Sci-Fi Laser Uploader */
 [data-testid="stFileUploaderDropzone"] { 
     position: relative; overflow: hidden; background: var(--surface-glass) !important; 
@@ -166,7 +152,6 @@ header[data-testid="stHeader"] { background: transparent !important; }
     background: var(--neon-cyan); box-shadow: 0 0 12px var(--neon-cyan), 0 0 24px var(--neon-cyan); 
     animation: scanline 3s linear infinite; pointer-events: none; 
 }
-
 /* Glass Cards Master Class */
 .metric-card, .food-card, .cl-summary, .ob-card, details.dq { 
     background: var(--surface-glass); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); 
@@ -178,7 +163,6 @@ header[data-testid="stHeader"] { background: transparent !important; }
     transform: translateY(-8px) scale(1.015); border-color: rgba(255, 255, 255, 0.2); 
     box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5), 0 0 30px rgba(0, 229, 255, 0.08); 
 }
-
 /* Metric Cards specific */
 .metric-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px; margin-top: 12px; }
 .metric-card { padding: 26px; position: relative; overflow: hidden; display: flex; flex-direction: column; justify-content: space-between; }
@@ -186,22 +170,18 @@ header[data-testid="stHeader"] { background: transparent !important; }
 .metric-card.is-flagged:hover { box-shadow: 0 20px 50px rgba(255, 23, 68, 0.15); border-color: rgba(255, 23, 68, 0.7); }
 .metric-card.is-low { border-color: rgba(255, 196, 0, 0.35); background: linear-gradient(180deg, rgba(255, 196, 0, 0.04) 0%, transparent 100%), var(--surface-glass); }
 .metric-card.is-low:hover { box-shadow: 0 20px 50px rgba(255, 196, 0, 0.15); border-color: rgba(255, 196, 0, 0.7); }
-
 .flag-bar { position: absolute; top: 0; left: 0; right: 0; height: 4px; background: var(--neon-coral); box-shadow: 0 0 15px var(--neon-coral); }
 .metric-card.is-low .flag-bar { background: var(--neon-amber); box-shadow: 0 0 15px var(--neon-amber); }
-
 .metric-head { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; gap: 12px; }
 .metric-cat { font: 600 11px/1.2 'JetBrains Mono', monospace; letter-spacing: 0.18em; text-transform: uppercase; color: var(--text-muted); margin: 0 0 6px; }
 .metric-name { font-size: 1.15rem; font-weight: 600; margin: 0; color: var(--text-main); }
 .metric-value { display: flex; align-items: baseline; gap: 8px; margin: 0 0 4px; }
-
 /* Large High-Contrast Numbers for Readability */
 .metric-number { font: 700 3.6rem/1 'JetBrains Mono', monospace; color: var(--text-main); text-shadow: 0 4px 24px rgba(255,255,255,0.15); }
 .metric-card.is-flagged .metric-number { color: var(--neon-coral); text-shadow: 0 4px 24px rgba(255, 23, 68, 0.4); }
 .metric-card.is-low .metric-number { color: var(--neon-amber); text-shadow: 0 4px 24px rgba(255, 196, 0, 0.4); }
 .metric-unit { font: 500 1.1rem 'JetBrains Mono', monospace; color: var(--text-muted); }
 .metric-raw { font: 600 1.2rem/1.5 'JetBrains Mono', monospace; color: var(--text-main); }
-
 /* Apple-style Range Track */
 .range { margin-top: 24px; display: flex; flex-direction: column; gap: 10px; }
 .range-track { height: 8px; background: rgba(255,255,255,0.06); border-radius: 999px; position: relative; overflow: visible; }
@@ -210,10 +190,8 @@ header[data-testid="stHeader"] { background: transparent !important; }
 .metric-card.is-flagged .range-marker { background: var(--neon-coral); box-shadow: 0 0 16px var(--neon-coral), inset 0 0 0 4px var(--bg-deep); }
 .metric-card.is-low .range-marker { background: var(--neon-amber); box-shadow: 0 0 16px var(--neon-amber), inset 0 0 0 4px var(--bg-deep); }
 .range-labels { display: flex; justify-content: space-between; font: 500 12px 'JetBrains Mono', monospace; color: var(--text-muted); }
-
 .metric-explain { padding-top: 18px; margin-top: 18px; border-top: 1px dashed rgba(255,255,255,0.1); font-size: 0.98rem; line-height: 1.6; color: rgba(255,255,255,0.85); margin-bottom: 0; }
 .metric-explain strong { color: var(--text-main); font-weight: 600; display: block; margin-bottom: 6px; }
-
 /* Neon Breathing Pills */
 .pill { display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px; border-radius: 999px; font: 700 11px/1 'JetBrains Mono', monospace; letter-spacing: 0.12em; text-transform: uppercase; white-space: nowrap; border: 1px solid transparent; }
 .pill svg { width: 14px; height: 14px; }
@@ -222,7 +200,6 @@ header[data-testid="stHeader"] { background: transparent !important; }
 .pill-normal { background: rgba(0, 230, 118, 0.12); color: var(--neon-emerald); border-color: rgba(0, 230, 118, 0.4); box-shadow: 0 0 15px rgba(0, 230, 118, 0.15); }
 .pill-high { background: rgba(255, 23, 68, 0.12); color: var(--neon-coral); animation: breatheCoral 2.5s ease-in-out infinite; }
 .pill-low { background: rgba(255, 196, 0, 0.12); color: var(--neon-amber); animation: breatheAmber 2.5s ease-in-out infinite; }
-
 /* Summary Dashboard Panel */
 .cl-summary { padding: 36px; display: grid; gap: 28px; margin: 32px 0 16px; border-radius: 28px; }
 .cl-summary-text { font-size: 1.15rem; line-height: 1.7; color: rgba(255,255,255,0.95); margin: 0; }
@@ -234,13 +211,11 @@ header[data-testid="stHeader"] { background: transparent !important; }
 .cl-stat-flagged .cl-stat-value { color: var(--neon-coral); text-shadow: 0 0 20px rgba(255,23,68,0.3); }
 .cl-flag-tag { background: rgba(255,23,68,0.15); color: var(--neon-coral); padding: 8px 14px; border-radius: 10px; font-weight: 600; font-size: 0.9rem; border: 1px solid rgba(255,23,68,0.3); box-shadow: 0 0 12px rgba(255,23,68,0.15); }
 .cl-flag-list { display: flex; gap: 12px; flex-wrap: wrap; }
-
 /* Nutrition & Doctor Consultation */
 .food-card { padding: 28px; display: flex; flex-direction: column; gap: 18px; }
 .food-head { display: flex; justify-content: space-between; align-items: center; gap: 16px; }
 .food-title { font-size: 1.25rem; font-weight: 600; margin: 0; color: var(--text-main); }
 .food-body { font-size: 1.05rem; line-height: 1.8; color: rgba(255,255,255,0.85); margin: 0; white-space: pre-line; }
-
 .dq-list { display: flex; flex-direction: column; gap: 14px; margin-top: 16px; }
 details.dq { margin-bottom: 0; }
 details.dq > summary { padding: 22px 26px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; list-style: none; gap: 16px; }
@@ -256,13 +231,11 @@ details.dq[open] .dq-chev { transform: rotate(180deg); color: var(--neon-cyan); 
 .dq-body ol { list-style: none; counter-reset: q; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 14px; }
 .dq-body li { counter-increment: q; background: rgba(0,0,0,0.3); border: 1px solid var(--border-glass); padding: 18px 20px; border-radius: 14px; font-size: 1.05rem; color: rgba(255,255,255,0.9); display: flex; gap: 18px; line-height: 1.6; }
 .dq-body li::before { content: counter(q, decimal-leading-zero); font: 700 15px/1.5 'JetBrains Mono', monospace; color: var(--neon-cyan); flex-shrink: 0; }
-
 /* Linear-style Streamlit Tabs Overrides */
 .stTabs [data-baseweb="tab-list"] { background: var(--surface-glass); backdrop-filter: blur(24px); border-radius: 18px; padding: 8px; gap: 10px; border: 1px solid var(--border-glass); display: inline-flex; margin-bottom: 32px; box-shadow: 0 12px 32px rgba(0,0,0,0.3); }
 .stTabs [data-baseweb="tab"] { background: transparent; border-radius: 12px; padding: 12px 28px; transition: all 0.3s var(--ease-out); border: none; color: var(--text-muted); font-weight: 600; font-size: 1.05rem; letter-spacing: 0.02em; }
 .stTabs [aria-selected="true"] { background: rgba(255, 255, 255, 0.12) !important; color: var(--text-main) !important; box-shadow: 0 4px 20px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.1); }
 .stTabs [data-baseweb="tab-highlight"] { display: none; }
-
 /* Buttons & Inputs */
 .stButton > button, .stDownloadButton > button {
     background: linear-gradient(135deg, var(--neon-cyan), #00b0ff) !important; color: #000 !important;
@@ -275,14 +248,12 @@ details.dq[open] .dq-chev { transform: rotate(180deg); color: var(--neon-cyan); 
 }
 .st-key-change_prefs button { background: transparent !important; color: var(--text-main) !important; border: 1px solid var(--border-glass) !important; box-shadow: none !important; }
 .st-key-change_prefs button:hover { background: rgba(255,255,255,0.08) !important; border-color: rgba(255,255,255,0.25) !important; }
-
 /* Floating Spatial Onboarding */
 .ob-card { animation: cardRise 0.7s var(--ease-spring) both, floatSlow 6s ease-in-out infinite; padding: 56px 40px; text-align: center; border: 1px solid rgba(0, 229, 255, 0.25); box-shadow: 0 20px 60px rgba(0,0,0,0.5), inset 0 0 50px rgba(0,229,255,0.06); margin-top: 48px; }
 .ob-card .cl-logo { margin: 0 auto 28px; }
 .ob-step { display: inline-block; font: 700 12px 'JetBrains Mono', monospace; letter-spacing: 0.25em; text-transform: uppercase; color: var(--neon-cyan); margin-bottom: 16px; background: rgba(0,229,255,0.12); padding: 6px 16px; border-radius: 999px; }
 .ob-title { font-size: 2.4rem; font-weight: 700; color: var(--text-main); margin: 0 0 18px; letter-spacing: -0.03em; }
 .ob-desc { font-size: 1.15rem; line-height: 1.6; color: var(--text-muted); margin: 0 auto; max-width: 520px; }
-
 .cl-footer { margin-top: 60px; padding-top: 24px; border-top: 1px dashed var(--border-glass); text-align: center; font-size: 0.85rem; color: #5e6b82; letter-spacing: 0.02em; }
 </style>
 """
@@ -326,10 +297,8 @@ RAW_SVG = """<svg width="100%" height="100%" viewBox="0 0 100 100" xmlns="http:/
     <!-- Top Glass Glossy Shine -->
     <ellipse cx="50" cy="20" rx="32" ry="12" fill="url(#glassReflection)"/>
 </svg>"""
-
 B64_LOGO = base64.b64encode(RAW_SVG.encode('utf-8')).decode('utf-8')
 ICON_LOGO = f'<img src="data:image/svg+xml;base64,{B64_LOGO}" alt="Logo" style="filter: drop-shadow(0px 4px 6px rgba(0,229,255,0.4));" />'
-
 ICON_UP = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>'
 ICON_DOWN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M19 12l-7 7-7-7"/></svg>'
 ICON_CHEV = '<svg class="dq-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>'
@@ -457,52 +426,89 @@ TEXTS = {
 L = TEXTS[st.session_state.selected_lang]
 
 # ---------------------------------------------------------
-# Document Text Extraction
+# Document Text Extraction  (improved for large 2-5 MB files)
 # ---------------------------------------------------------
+MAX_REPORT_CHARS = 35000          # ~8-10k tokens – safe for free-tier TPM + prompt overhead
+MAX_OCR_PAGES = 6                 # lab reports rarely need more than first few pages
+MAX_IMAGE_SIDE = 2000             # px – prevents huge OCR memory / token blow-up
+
 def extract_raw_file_text(file_bytes, filename, mime_type):
     extracted_text = ""
-    is_pdf = "pdf" in mime_type.lower() or filename.lower().endswith(".pdf")
+    is_pdf = "pdf" in (mime_type or "").lower() or filename.lower().endswith(".pdf")
 
     # Tell pytesseract exactly where the Tesseract program is installed
     if pytesseract is not None:
         if sys.platform.startswith('win'):
-            # Local Windows path
             pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
         else:
             # On Streamlit Cloud (Linux), Tesseract installs to the system path automatically
             pass
 
+    # 1. Prefer native PDF text extraction (clean + short)
     if is_pdf and pypdf is not None:
         try:
             pdf_reader = pypdf.PdfReader(io.BytesIO(file_bytes))
-            for page in pdf_reader.pages:
+            for page in pdf_reader.pages[:MAX_OCR_PAGES]:
                 t = page.extract_text()
-                if t: extracted_text += t + "\n"
+                if t:
+                    extracted_text += t + "\n"
         except Exception:
             pass
 
+    # 2. Fall back to OCR only when needed
     if not extracted_text.strip():
         if is_pdf and pdf2image is not None and pytesseract is not None:
             try:
-                for img in pdf2image.convert_from_bytes(file_bytes):
+                images = pdf2image.convert_from_bytes(
+                    file_bytes,
+                    first_page=1,
+                    last_page=MAX_OCR_PAGES,
+                    dpi=150,                    # lower DPI = less noise + faster
+                )
+                for img in images:
+                    # Resize if the page is huge
+                    w, h = img.size
+                    if max(w, h) > MAX_IMAGE_SIDE:
+                        ratio = MAX_IMAGE_SIDE / max(w, h)
+                        img = img.resize((int(w * ratio), int(h * ratio)), Image.LANCZOS)
                     extracted_text += pytesseract.image_to_string(img) + "\n"
             except Exception as e:
-                print(f"PDF OCR Error: {e}") # Prints error to your terminal
+                print(f"PDF OCR Error: {e}")
         elif not is_pdf and pytesseract is not None:
             try:
-                extracted_text = pytesseract.image_to_string(Image.open(io.BytesIO(file_bytes)))
+                img = Image.open(io.BytesIO(file_bytes))
+                w, h = img.size
+                if max(w, h) > MAX_IMAGE_SIDE:
+                    ratio = MAX_IMAGE_SIDE / max(w, h)
+                    img = img.resize((int(w * ratio), int(h * ratio)), Image.LANCZOS)
+                extracted_text = pytesseract.image_to_string(img)
             except Exception as e:
-                print(f"Image OCR Error: {e}") # Prints error to your terminal
+                print(f"Image OCR Error: {e}")
+
+    # 3. Clean + hard truncate to stay within token limits
+    extracted_text = re.sub(r"[ \t]+", " ", extracted_text)          # collapse spaces
+    extracted_text = re.sub(r"\n{3,}", "\n\n", extracted_text)        # collapse blank lines
+    extracted_text = extracted_text.strip()
+
+    if len(extracted_text) > MAX_REPORT_CHARS:
+        extracted_text = (
+            extracted_text[:MAX_REPORT_CHARS]
+            + "\n\n[Document truncated to the most relevant beginning portion to stay within token limits.]"
+        )
 
     return extracted_text
 
 # ---------------------------------------------------------
-# GROQ AI LPU ENGINE (1,000+ daily runs, sub-second speed)
+# GROQ AI LPU ENGINE (token-safe for large files)
 # ---------------------------------------------------------
 def analyze_report_with_groq(file_bytes, filename, mime_type, target_lang, target_diet, api_key):
     try:
         if Groq is None:
             return None, "groq library not installed. Run: pip install groq"
+
+        # Hard size guard
+        if len(file_bytes) > 8 * 1024 * 1024:          # 8 MB
+            return None, "File is larger than 8 MB. Please compress or upload a clearer lower-resolution scan."
 
         extracted_text = extract_raw_file_text(file_bytes, filename, mime_type)
         if not extracted_text.strip():
@@ -510,60 +516,51 @@ def analyze_report_with_groq(file_bytes, filename, mime_type, target_lang, targe
 
         client = Groq(api_key=api_key.strip())
 
-        prompt = f"""
-You are an expert clinical laboratory analyst and medical AI consultant.
-Analyze this medical lab report text with maximum clinical precision:
+        # Leaner prompt – every token counts on free tier
+        prompt = f"""You are an expert clinical laboratory analyst.
+Analyze this medical lab report text with maximum clinical precision.
 
 --- REPORT TEXT ---
 {extracted_text}
 --- END REPORT ---
 
-Requirements:
-- Target Language: {target_lang} (ALL text fields MUST be in {target_lang})
-- Dietary Profile: {target_diet}
+Target Language: {target_lang} (ALL text fields MUST be in {target_lang})
+Dietary Profile: {target_diet}
 
-STRICT CLINICAL RULES:
-1. Ignore Lab IDs, doctor registration numbers, invoice numbers, and patient address details.
-2. Extract all clinical biomarkers (Fasting Glucose, HbA1c, Cholesterol, Triglycerides, Hemoglobin, Creatinine, Bilirubin, TSH, etc.).
-3. For each biomarker:
-   - "name": Clean parameter title translated to {target_lang}.
-   - "category": Short category (e.g. Metabolic, Lipid, Thyroid, Blood Count, Liver, Kidney) translated to {target_lang}.
-   - "value": Observed measured value with unit and reference range.
-   - "numeric_value": Float value, or null.
-   - "unit": Unit string, or "".
-   - "ref_low": Lower bound float, or null.
-   - "ref_high": Upper bound float, or null.
-   - "status_code": "normal" | "high" | "low".
-   - "status": Translated status word.
-   - "badge": "badge-attention" if High/Low, or "badge-normal" if Normal.
-   - "explanation": Simple human language biological explanation in {target_lang}.
-   - "food_remedies": Specific Indian food remedies aligned with {target_diet} in {target_lang}.
-   - "questions_for_doctor": 2-3 specific clinical questions in {target_lang}.
+STRICT RULES:
+1. Ignore Lab IDs, doctor numbers, invoices, addresses.
+2. Extract all clinical biomarkers (Glucose, HbA1c, Cholesterol, Triglycerides, Hemoglobin, Creatinine, Bilirubin, TSH, etc.).
+3. For each biomarker return:
+   - name, category, value, numeric_value, unit, ref_low, ref_high,
+   - status_code ("normal"|"high"|"low"), status, badge,
+   - explanation (simple biological meaning),
+   - food_remedies (Indian cuisine, {target_diet}),
+   - questions_for_doctor (2-3 specific questions)
+4. summary: 2-3 sentence overview.
 
-4. "summary": 2-3 sentence overview of overall report in {target_lang}.
-
-Return ONLY a valid JSON object matching this schema:
+Return ONLY valid JSON:
 {{
-  "summary": "Full summary in {target_lang}",
+  "summary": "...",
   "parameters": [
     {{
-      "name": "string",
-      "category": "string",
-      "value": "string",
-      "numeric_value": 0,
-      "unit": "string",
-      "ref_low": 0,
-      "ref_high": 0,
-      "status_code": "normal | high | low",
-      "status": "string",
-      "badge": "badge-attention OR badge-normal",
-      "explanation": "string",
-      "food_remedies": "string",
-      "questions_for_doctor": ["string", "string"]
+      "name": "...",
+      "category": "...",
+      "value": "...",
+      "numeric_value": 0 or null,
+      "unit": "...",
+      "ref_low": 0 or null,
+      "ref_high": 0 or null,
+      "status_code": "normal|high|low",
+      "status": "...",
+      "badge": "badge-attention|badge-normal",
+      "explanation": "...",
+      "food_remedies": "...",
+      "questions_for_doctor": ["...", "..."]
     }}
   ]
 }}
 """
+
         response = client.chat.completions.create(
             model="openai/gpt-oss-120b",
             messages=[
@@ -572,12 +569,19 @@ Return ONLY a valid JSON object matching this schema:
             ],
             response_format={"type": "json_object"},
             temperature=0.1,
+            max_tokens=8192,
         )
 
         parsed_data = json.loads(response.choices[0].message.content)
         return parsed_data, None
 
     except Exception as e:
+        err = str(e).lower()
+        if "token" in err or "context" in err or "length" in err:
+            return None, (
+                "The report is too long for the current token budget. "
+                "Try a clearer scan of only the first few pages or a lower-resolution PDF."
+            )
         return None, f"Groq Execution Error: {str(e)}"
 
 # ---------------------------------------------------------
@@ -608,21 +612,17 @@ def normalise(param) -> dict:
     low = to_float(param.get("ref_low"))
     high = to_float(param.get("ref_high"))
     unit = str(param.get("unit", "") or "")
-
     if value is None:
         m = re.search(NUM_RE, raw_value)
         value = float(m.group()) if m else None
-
     if low is None and high is None:
         ref_part = raw_value.split("(", 1)[1] if "(" in raw_value else ""
         rng = re.search(rf"({NUM_RE})\s*(?:-|–|to)\s*({NUM_RE})", ref_part)
         if rng:
             low, high = float(rng.group(1)), float(rng.group(2))
-
     questions = param.get("questions_for_doctor") or []
     if isinstance(questions, str):
         questions = [q.strip() for q in questions.split("\n") if q.strip()]
-
     return {
         "name": param.get("name", "Biomarker"),
         "category": param.get("category", ""),
@@ -656,10 +656,8 @@ def range_bar(b: dict) -> str:
     span = (high - low) or max(abs(high), 1.0)
     lo_edge = max(0.0, low - span * 0.5) if low >= 0 else low - span * 0.5
     hi_edge = high + span * 0.5
-
     def pct(n):
         return min(100.0, max(0.0, (n - lo_edge) / (hi_edge - lo_edge) * 100))
-
     return f"""
     <div class="range" aria-hidden="true">
         <div class="range-track">
@@ -674,16 +672,13 @@ def metric_card(b: dict, index: int) -> str:
     state_cls = {"high": "is-flagged", "low": "is-low"}.get(b["code"], "")
     flag_bar = '<span class="flag-bar" aria-hidden="true"></span>' if b["code"] != "normal" else ""
     category = f'<p class="metric-cat">{esc(b["category"])}</p>' if b["category"] else ""
-
     if b["value"] is not None:
         value_html = f'<span class="metric-number">{fmt_num(b["value"])}</span><span class="metric-unit">{esc(b["unit"])}</span>'
     else:
         value_html = f'<span class="metric-raw">{esc(b["raw_value"])}</span>'
-
     explain = ""
     if b["explanation"]:
         explain = f'<p class="metric-explain"><strong>{esc(L["what_happening"])}</strong>{esc(b["explanation"])}</p>'
-
     return f"""
     <article class="metric-card {state_cls}" style="animation-delay:{index * 60}ms">
         {flag_bar}
@@ -703,7 +698,6 @@ def summary_panel(summary: str, biomarkers: list) -> str:
     normal = total - len(flagged)
     tags = "".join(f'<span class="cl-flag-tag">{esc(b["name"])}</span>' for b in flagged)
     tag_row = f'<div class="cl-flag-list">{tags}</div>' if tags else ""
-
     return f"""
     <section class="cl-summary">
         <div>
@@ -736,7 +730,6 @@ def question_accordion(title: str, questions: list, code, is_open: bool, index: 
 # STEP 1: ONBOARDING MODAL 1 - LANGUAGE
 # ---------------------------------------------------------
 LANG_OPTIONS = ["English", "हिंदी", "ગુજરાતી"]
-
 if st.session_state.onboarding_step == 1:
     _, center, _ = st.columns([1, 1.6, 1])
     with center:
@@ -830,6 +823,7 @@ else:
         <p class="cl-sub" style="margin-bottom:12px">{esc(L['upload_desc'])}</p>
     </div>
     """)
+
     uploaded_file = st.file_uploader(L["upload_label"], type=["pdf", "png", "jpg", "jpeg"], label_visibility="collapsed")
 
     parsed_report_data = None
@@ -838,6 +832,11 @@ else:
     if uploaded_file is not None:
         file_bytes = uploaded_file.getvalue()
         mime_type = uploaded_file.type or "application/pdf"
+
+        # Soft warning for large files
+        if uploaded_file.size > 6 * 1024 * 1024:
+            st.warning("Large file detected. Analysis will use only the first few pages / truncated text to stay within token limits.")
+
         cache_key = (
             hashlib.sha256(file_bytes).hexdigest(),
             st.session_state.selected_lang,
@@ -852,7 +851,6 @@ else:
                     st.session_state.selected_lang, st.session_state.selected_diet,
                     groq_api_key
                 )
-
             if parsed_report_data:
                 st.session_state.analysis_cache[cache_key] = parsed_report_data
 
@@ -908,7 +906,6 @@ else:
             top_level = parsed_report_data.get("questions") or []
             if not groups and top_level:
                 groups = [(L["general_questions"], top_level, None)]
-
             if groups:
                 accordions = "".join(
                     question_accordion(title, qs, code, is_open=(i == 0), index=i)
@@ -921,7 +918,6 @@ else:
                     <div class="dq-list">{accordions}</div>
                 </section>
                 """)
-
                 q_text = "\n\n".join(
                     f"{title}\n" + "\n".join(f"  {n}. {q}" for n, q in enumerate(qs, 1))
                     for title, qs, _ in groups
