@@ -426,29 +426,31 @@ TEXTS = {
 L = TEXTS[st.session_state.selected_lang]
 
 # ---------------------------------------------------------
-# Document Text Extraction  (improved for large 2-5 MB files)
+# Document Text Extraction  (robust for large 2-15 MB files)
 # ---------------------------------------------------------
-MAX_REPORT_CHARS = 35000          # ~8-10k tokens – safe for free-tier TPM + prompt overhead
-MAX_OCR_PAGES = 6                 # lab reports rarely need more than first few pages
-MAX_IMAGE_SIDE = 2000             # px – prevents huge OCR memory / token blow-up
+MAX_REPORT_CHARS = 35000          # safe ~8-10k tokens
+MAX_OCR_PAGES = 6
+MAX_IMAGE_SIDE = 1800             # slightly more aggressive
 
 def extract_raw_file_text(file_bytes, filename, mime_type):
     extracted_text = ""
     is_pdf = "pdf" in (mime_type or "").lower() or filename.lower().endswith(".pdf")
+    file_size_mb = len(file_bytes) / (1024 * 1024)
 
-    # Tell pytesseract exactly where the Tesseract program is installed
+    # Adaptive settings for larger files
+    ocr_pages = 4 if file_size_mb > 4 else MAX_OCR_PAGES
+    dpi = 120 if file_size_mb > 4 else 150
+    max_side = 1600 if file_size_mb > 4 else MAX_IMAGE_SIDE
+
     if pytesseract is not None:
         if sys.platform.startswith('win'):
             pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
-        else:
-            # On Streamlit Cloud (Linux), Tesseract installs to the system path automatically
-            pass
 
-    # 1. Prefer native PDF text extraction (clean + short)
+    # 1. Prefer native PDF text (clean + short)
     if is_pdf and pypdf is not None:
         try:
             pdf_reader = pypdf.PdfReader(io.BytesIO(file_bytes))
-            for page in pdf_reader.pages[:MAX_OCR_PAGES]:
+            for page in pdf_reader.pages[:ocr_pages]:
                 t = page.extract_text()
                 if t:
                     extracted_text += t + "\n"
@@ -462,14 +464,14 @@ def extract_raw_file_text(file_bytes, filename, mime_type):
                 images = pdf2image.convert_from_bytes(
                     file_bytes,
                     first_page=1,
-                    last_page=MAX_OCR_PAGES,
-                    dpi=150,                    # lower DPI = less noise + faster
+                    last_page=ocr_pages,
+                    dpi=dpi,
+                    fmt="jpeg",               # much less memory than ppm
                 )
                 for img in images:
-                    # Resize if the page is huge
                     w, h = img.size
-                    if max(w, h) > MAX_IMAGE_SIDE:
-                        ratio = MAX_IMAGE_SIDE / max(w, h)
+                    if max(w, h) > max_side:
+                        ratio = max_side / max(w, h)
                         img = img.resize((int(w * ratio), int(h * ratio)), Image.LANCZOS)
                     extracted_text += pytesseract.image_to_string(img) + "\n"
             except Exception as e:
@@ -478,17 +480,16 @@ def extract_raw_file_text(file_bytes, filename, mime_type):
             try:
                 img = Image.open(io.BytesIO(file_bytes))
                 w, h = img.size
-                if max(w, h) > MAX_IMAGE_SIDE:
-                    ratio = MAX_IMAGE_SIDE / max(w, h)
+                if max(w, h) > max_side:
+                    ratio = max_side / max(w, h)
                     img = img.resize((int(w * ratio), int(h * ratio)), Image.LANCZOS)
                 extracted_text = pytesseract.image_to_string(img)
             except Exception as e:
                 print(f"Image OCR Error: {e}")
 
-    # 3. Clean + hard truncate to stay within token limits
-    extracted_text = re.sub(r"[ \t]+", " ", extracted_text)          # collapse spaces
-    extracted_text = re.sub(r"\n{3,}", "\n\n", extracted_text)        # collapse blank lines
-    extracted_text = extracted_text.strip()
+    # 3. Clean + hard truncate
+    extracted_text = re.sub(r"[ \t]+", " ", extracted_text)
+    extracted_text = re.sub(r"\n{3,}", "\n\n", extracted_text).strip()
 
     if len(extracted_text) > MAX_REPORT_CHARS:
         extracted_text = (
@@ -506,9 +507,9 @@ def analyze_report_with_groq(file_bytes, filename, mime_type, target_lang, targe
         if Groq is None:
             return None, "groq library not installed. Run: pip install groq"
 
-        # Hard size guard
-        if len(file_bytes) > 8 * 1024 * 1024:          # 8 MB
-            return None, "File is larger than 8 MB. Please compress or upload a clearer lower-resolution scan."
+        # Soft limit only – we handle large files via page limits + truncation
+        if len(file_bytes) > 25 * 1024 * 1024:          # 25 MB absolute ceiling
+            return None, "File is larger than 25 MB. Please use a lower-resolution scan or fewer pages."
 
         extracted_text = extract_raw_file_text(file_bytes, filename, mime_type)
         if not extracted_text.strip():
