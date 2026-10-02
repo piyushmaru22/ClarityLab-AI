@@ -45,6 +45,18 @@ except ImportError:
     pdf2image = None
 
 # ---------------------------------------------------------
+# Model Registry & Fallback Hierarchy
+# ---------------------------------------------------------
+# openai/gpt-oss-120b alongside top open-weight models for extraction & reasoning
+MODEL_ROSTER = [
+    "openai/gpt-oss-120b",
+    "deepseek-r1-distill-llama-70b",
+    "llama-3.3-70b-versatile",
+    "qwen/qwen-2.5-72b-instruct",
+    "llama-3.1-8b-instant",
+]
+
+# ---------------------------------------------------------
 # Page Configuration
 # ---------------------------------------------------------
 st.set_page_config(
@@ -333,7 +345,7 @@ TEXTS = {
     "English": {
         "title": "ClarityLab AI",
         "tagline": "Personalized Diagnostic Medical Interpreter",
-        "system_status": "Groq LPU Diagnostic Engine Active",
+        "system_status": "Diagnostic AI Engine Active",
         "lang_modal_title": "Choose Your Language",
         "lang_modal_desc": "Select the language you feel most comfortable reading your medical report analysis in:",
         "lang_modal_btn": "Proceed to Diet Selection →",
@@ -369,7 +381,7 @@ TEXTS = {
     "हिंदी": {
         "title": "क्लैरिटीलैब एआई",
         "tagline": "सरल और सटीक मेडिकल रिपोर्ट विश्लेषक",
-        "system_status": "ग्रोक एआई डायग्नोस्टिक इंजन सक्रिय है",
+        "system_status": "डायग्नोस्टिक एआई इंजन सक्रिय है",
         "lang_modal_title": "अपनी भाषा चुनें (Select Language)",
         "lang_modal_desc": "अपनी मेडिकल रिपोर्ट को आसानी से समझने के लिए अपनी पसंदीदा भाषा चुनें:",
         "lang_modal_btn": "आहार चयन के लिए आगे बढ़ें →",
@@ -405,7 +417,7 @@ TEXTS = {
     "ગુજરાતી": {
         "title": "ક્લેરિટીલેબ એઆઈ",
         "tagline": "તબીબી લેબ રિપોર્ટનું સરળ વિશ્લેષણ",
-        "system_status": "ગ્રોક એઆઈ સિસ્ટમ કાર્યરત છે",
+        "system_status": "ડાયગ્નોસ્ટિક એઆઈ સિસ્ટમ કાર્યરત છે",
         "lang_modal_title": "તમારી ભાષા પસંદ કરો",
         "lang_modal_desc": "તમારા મેડિકલ રિપોર્ટને સરળતાથી સમજવા માટે તમારી અનુકૂળ ભાષા પસંદ કરો:",
         "lang_modal_btn": "ખોરાક પસંદ કરવા માટે આગળ વધો →",
@@ -445,23 +457,15 @@ L = TEXTS[st.session_state.selected_lang]
 # Robust Document Text & Table Extractor
 # ---------------------------------------------------------
 def extract_pages_text(file_bytes: bytes, filename: str, mime_type: str) -> list[str]:
-    """
-    Extracts text page-by-page while preserving table structures via pdfplumber.
-    If any single page has low character density (<80 chars), it falls back
-    to OCR for that specific page without losing the rest of the document.
-    """
     pages_text = []
     is_pdf = "pdf" in mime_type.lower() or filename.lower().endswith(".pdf")
 
     if is_pdf:
-        # 1. Primary: Use pdfplumber for table & layout preservation
         if pdfplumber is not None:
             try:
                 with pdfplumber.open(io.BytesIO(file_bytes)) as pdf:
                     for idx, page in enumerate(pdf.pages):
                         page_text = page.extract_text(layout=True) or ""
-                        
-                        # Extract and format tables into structured rows
                         tables = page.extract_tables()
                         if tables:
                             table_lines = []
@@ -473,7 +477,6 @@ def extract_pages_text(file_bytes: bytes, filename: str, mime_type: str) -> list
                             if table_lines:
                                 page_text += "\n" + "\n".join(table_lines)
 
-                        # Per-page OCR fallback if the page is image-based or poorly encoded
                         if len(page_text.strip()) < 80 and pdf2image is not None and pytesseract is not None:
                             try:
                                 images = pdf2image.convert_from_bytes(file_bytes, first_page=idx+1, last_page=idx+1)
@@ -489,7 +492,6 @@ def extract_pages_text(file_bytes: bytes, filename: str, mime_type: str) -> list
             except Exception as e:
                 print(f"pdfplumber extraction failed: {e}")
 
-        # 2. Secondary fallback: pypdf if pdfplumber is not installed
         if not pages_text and pypdf is not None:
             try:
                 reader = pypdf.PdfReader(io.BytesIO(file_bytes))
@@ -507,7 +509,6 @@ def extract_pages_text(file_bytes: bytes, filename: str, mime_type: str) -> list
             except Exception as e:
                 print(f"pypdf extraction failed: {e}")
 
-        # 3. Last-ditch PDF OCR for purely scanned PDFs
         if not pages_text and pdf2image is not None and pytesseract is not None:
             try:
                 all_images = pdf2image.convert_from_bytes(file_bytes)
@@ -519,7 +520,6 @@ def extract_pages_text(file_bytes: bytes, filename: str, mime_type: str) -> list
                 print(f"Full PDF OCR failed: {e}")
 
     else:
-        # Standard image upload (PNG, JPG, etc.)
         if pytesseract is not None:
             try:
                 img = Image.open(io.BytesIO(file_bytes))
@@ -535,7 +535,6 @@ def extract_pages_text(file_bytes: bytes, filename: str, mime_type: str) -> list
 # Helper Functions for AI & Token Management
 # ---------------------------------------------------------
 def clean_json_response(content: str) -> dict:
-    """Safely extracts JSON from model completions that may include markdown fences."""
     cleaned = content.strip()
     if cleaned.startswith("```"):
         cleaned = re.sub(r"^```(?:json)?\s*", "", cleaned)
@@ -543,33 +542,38 @@ def clean_json_response(content: str) -> dict:
     try:
         return json.loads(cleaned)
     except json.JSONDecodeError:
-        # Find first { and last }
         start = cleaned.find("{")
         end = cleaned.rfind("}")
         if start != -1 and end != -1:
             return json.loads(cleaned[start:end+1])
         raise
 
-def call_groq_with_fallback(client, messages, response_format=None, temperature=0.1):
-    """Executes call using llama-3.3-70b-versatile, falling back to llama-3.1-8b-instant if rate-limited."""
-    kwargs = {
-        "messages": messages,
-        "temperature": temperature,
-    }
-    if response_format:
-        kwargs["response_format"] = response_format
-
-    try:
-        return client.chat.completions.create(model="llama-3.3-70b-versatile", **kwargs)
-    except Exception as e:
-        err_msg = str(e).lower()
-        if "rate" in err_msg or "token" in err_msg or "tpm" in err_msg or "model" in err_msg:
-            # Fallback to high-throughput 8B model
-            return client.chat.completions.create(model="llama-3.1-8b-instant", **kwargs)
-        raise e
+def call_ai_with_fallback(client, messages, response_format=None, temperature=0.1):
+    """
+    Cycles sequentially through candidate models (openai/gpt-oss-120b, DeepSeek-R1, Llama-3.3, Qwen-2.5)
+    to guarantee reliable execution regardless of single model outages or rate quotas.
+    """
+    last_exception = None
+    for model_name in MODEL_ROSTER:
+        try:
+            kwargs = {
+                "model": model_name,
+                "messages": messages,
+                "temperature": temperature,
+            }
+            if response_format:
+                kwargs["response_format"] = response_format
+            return client.chat.completions.create(**kwargs)
+        except Exception as e:
+            last_exception = e
+            err_str = str(e).lower()
+            if any(k in err_str for k in ["rate", "tpm", "rpm", "not found", "decommissioned", "invalid_request_error"]):
+                continue
+            continue
+    raise last_exception or RuntimeError("All model roster candidates failed to respond.")
 
 # ---------------------------------------------------------
-# GROQ AI LPU ENGINE (Two-Stage Chunked Extraction & Enrichment)
+# AI LPU ENGINE (Two-Stage Chunked Extraction & Enrichment)
 # ---------------------------------------------------------
 def analyze_report_with_groq(file_bytes, filename, mime_type, target_lang, target_diet, api_key):
     try:
@@ -582,9 +586,7 @@ def analyze_report_with_groq(file_bytes, filename, mime_type, target_lang, targe
 
         client = Groq(api_key=api_key.strip())
 
-        # ---------------------------------------------------------
         # STAGE 1: Extract all parameters per 2-page chunk
-        # ---------------------------------------------------------
         chunk_size = 2
         chunks = ["\n--- PAGE BREAK ---\n".join(pages[i:i + chunk_size]) for i in range(0, len(pages), chunk_size)]
         all_extracted_params = []
@@ -617,7 +619,7 @@ JSON Format:
 """
 
         for chunk_idx, chunk_text in enumerate(chunks):
-            response = call_groq_with_fallback(
+            response = call_ai_with_fallback(
                 client=client,
                 messages=[
                     {"role": "system", "content": "You are a clinical diagnostic extraction engine. Respond strictly in valid JSON."},
@@ -637,7 +639,6 @@ JSON Format:
         if not all_extracted_params:
             return None, "No medical parameters could be extracted. Please ensure the document contains clinical test rows."
 
-        # Deduplicate tests by normalized name
         unique_params = {}
         for p in all_extracted_params:
             name = str(p.get("name", "")).strip()
@@ -647,9 +648,7 @@ JSON Format:
             if key not in unique_params:
                 unique_params[key] = p
 
-        # ---------------------------------------------------------
         # Mathematical Validation (Python Bounds Checking)
-        # ---------------------------------------------------------
         processed_params = []
         flagged_params = []
 
@@ -665,7 +664,6 @@ JSON Format:
                 elif high is not None and val > high:
                     code = "high"
             else:
-                # String heuristics for qualitative tests (e.g. Positive/Negative)
                 raw_lower = str(p.get("raw_value", "")).lower()
                 if any(w in raw_lower for w in ["positive", "reactive", "detected", "high"]):
                     code = "high"
@@ -680,9 +678,7 @@ JSON Format:
             if code in ("high", "low"):
                 flagged_params.append(p)
 
-        # ---------------------------------------------------------
         # STAGE 2: Enrichment (Targeted Diet & Doctor Consultation)
-        # ---------------------------------------------------------
         flagged_summary_context = [
             {
                 "name": p["name"],
@@ -726,7 +722,7 @@ Output strictly valid JSON matching this schema:
 """
         enrichment_data = {}
         try:
-            enrich_resp = call_groq_with_fallback(
+            enrich_resp = call_ai_with_fallback(
                 client=client,
                 messages=[
                     {"role": "system", "content": "You are a medical consultant. Respond strictly in valid JSON."},
@@ -744,7 +740,6 @@ Output strictly valid JSON matching this schema:
                 "general_questions": []
             }
 
-        # Merge Stage 2 data back into processed parameters
         flagged_map = {
             item.get("name", "").strip().lower(): item 
             for item in enrichment_data.get("flagged_details", [])
@@ -754,7 +749,6 @@ Output strictly valid JSON matching this schema:
             p_key = p["name"].strip().lower()
             matched = flagged_map.get(p_key)
             if not matched:
-                # Fuzzy fallback matching
                 for k, v in flagged_map.items():
                     if k in p_key or p_key in k:
                         matched = v
@@ -778,7 +772,7 @@ Output strictly valid JSON matching this schema:
         return final_result, None
 
     except Exception as e:
-        return None, f"Groq Diagnostic Error: {str(e)}"
+        return None, f"Diagnostic AI Error: {str(e)}"
 
 # ---------------------------------------------------------
 # Normalization & UI Builders
@@ -1004,7 +998,7 @@ else:
     </div>
     """)
 
-    # Retrieve Groq API Key securely
+    # Retrieve API Key securely
     groq_api_key = ""
     try:
         groq_api_key = st.secrets.get("GROQ_API_KEY", "")
@@ -1035,7 +1029,7 @@ else:
         parsed_report_data = st.session_state.analysis_cache.get(cache_key)
 
         if parsed_report_data is None:
-            with st.spinner("Extracting parameters and analyzing report with Groq LPUs..."):
+            with st.spinner("Extracting parameters and analyzing report with Diagnostic Engine..."):
                 parsed_report_data, error_notice = analyze_report_with_groq(
                     file_bytes, uploaded_file.name, mime_type,
                     st.session_state.selected_lang, st.session_state.selected_diet,
