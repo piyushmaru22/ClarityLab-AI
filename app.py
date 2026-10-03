@@ -50,14 +50,11 @@ def esc(value) -> str:
     return html.escape(str(value if value is not None else ""))
 
 # ---------------------------------------------------------
-# Theme: Glassmorphism 3.0 — aurora, orbiting borders, ECG motion
+# Theme: Apple/Linear-Grade Glassmorphism 2.0 UI
 # ---------------------------------------------------------
 THEME_CSS = """
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
-
-@property --ang { syntax: '<angle>'; initial-value: 0deg; inherits: false; }
-
 :root {
     --bg-deep: #050914;
     --surface-glass: rgba(15, 21, 35, 0.45);
@@ -69,180 +66,136 @@ THEME_CSS = """
     --neon-emerald: #00e676;
     --neon-coral: #ff1744;
     --neon-amber: #ffc400;
-    --neon-violet: #7c4dff;
     --ease-spring: cubic-bezier(0.175, 0.885, 0.32, 1.275);
     --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
 }
-
-/* ---------- Global ---------- */
+/* Global Body & Background */
 html, body, .stApp, [class*="css"], .stMarkdown, button, input, label {
     font-family: 'Space Grotesk', -apple-system, BlinkMacSystemFont, sans-serif !important;
 }
-.stApp { background: var(--bg-deep) !important; color: var(--text-main); }
-.stApp::before {
-    content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none;
-    background: radial-gradient(circle at 15% 0%, rgba(0, 229, 255, 0.06) 0%, transparent 40%),
-                radial-gradient(circle at 85% 100%, rgba(0, 230, 118, 0.04) 0%, transparent 40%);
+.stApp { 
+    background: var(--bg-deep) !important; 
+    color: var(--text-main); 
+}
+.stApp::before { 
+    content: ""; 
+    position: fixed; 
+    inset: 0; 
+    background: radial-gradient(circle at 15% 0%, rgba(0, 229, 255, 0.06) 0%, transparent 40%), 
+                radial-gradient(circle at 85% 100%, rgba(0, 230, 118, 0.04) 0%, transparent 40%); 
+    z-index: -1; 
+    pointer-events: none; 
 }
 header[data-testid="stHeader"] { background: transparent !important; }
-.block-container { max-width: 1200px; padding-top: 2rem !important; padding-bottom: 4rem !important; position: relative; z-index: 1; }
-
-/* ---------- Aurora background ---------- */
-.aurora { position: fixed; inset: 0; overflow: hidden; pointer-events: none; z-index: 0; }
-.aurora i { position: absolute; border-radius: 50%; filter: blur(100px); will-change: transform; }
-.aurora i:nth-child(1) { width: 560px; height: 560px; left: -140px; top: -120px; background: rgba(0, 229, 255, 0.16); animation: drift1 24s ease-in-out infinite alternate; }
-.aurora i:nth-child(2) { width: 520px; height: 520px; right: -160px; top: 28%; background: rgba(0, 230, 118, 0.10); animation: drift2 29s ease-in-out infinite alternate; }
-.aurora i:nth-child(3) { width: 480px; height: 480px; left: 30%; bottom: -220px; background: rgba(124, 77, 255, 0.13); animation: drift3 33s ease-in-out infinite alternate; }
-@keyframes drift1 { to { transform: translate(220px, 160px) scale(1.2); } }
-@keyframes drift2 { to { transform: translate(-260px, -120px) scale(1.15); } }
-@keyframes drift3 { to { transform: translate(-200px, -140px) scale(1.25); } }
-
-/* ---------- Keyframes ---------- */
-@keyframes cardRise {
-    from { opacity: 0; transform: translateY(28px) scale(0.97); filter: blur(10px); }
-    to   { opacity: 1; transform: translateY(0) scale(1); filter: none; }
+.block-container { max-width: 1200px; padding-top: 2rem !important; padding-bottom: 4rem !important; }
+/* Micro-Animations */
+@keyframes cardRise { 
+    from { opacity: 0; transform: translateY(24px) scale(0.98); } 
+    to { opacity: 1; transform: translateY(0) scale(1); } 
 }
-@keyframes floatSlow { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
-@keyframes breatheCoral {
-    0%, 100% { box-shadow: 0 0 12px rgba(255, 23, 68, 0.25); border-color: rgba(255, 23, 68, 0.4); }
-    50% { box-shadow: 0 0 28px rgba(255, 23, 68, 0.6); border-color: rgba(255, 23, 68, 0.9); }
+@keyframes floatSlow { 
+    0%, 100% { transform: translateY(0); } 
+    50% { transform: translateY(-8px); } 
 }
-@keyframes breatheAmber {
-    0%, 100% { box-shadow: 0 0 12px rgba(255, 196, 0, 0.25); border-color: rgba(255, 196, 0, 0.4); }
-    50% { box-shadow: 0 0 28px rgba(255, 196, 0, 0.6); border-color: rgba(255, 196, 0, 0.9); }
+@keyframes breatheCoral { 
+    0%, 100% { box-shadow: 0 0 12px rgba(255, 23, 68, 0.25); border-color: rgba(255, 23, 68, 0.4); } 
+    50% { box-shadow: 0 0 28px rgba(255, 23, 68, 0.6); border-color: rgba(255, 23, 68, 0.9); } 
 }
-@keyframes scanline { 0% { top: 0; opacity: 0; } 15% { opacity: 1; } 85% { opacity: 1; } 100% { top: 100%; opacity: 0; } }
-@keyframes dotPulse {
-    0% { box-shadow: 0 0 0 0 rgba(0, 229, 255, 0.5); }
-    70% { box-shadow: 0 0 0 12px rgba(0, 229, 255, 0); }
-    100% { box-shadow: 0 0 0 0 rgba(0, 229, 255, 0); }
+@keyframes breatheAmber { 
+    0%, 100% { box-shadow: 0 0 12px rgba(255, 196, 0, 0.25); border-color: rgba(255, 196, 0, 0.4); } 
+    50% { box-shadow: 0 0 28px rgba(255, 196, 0, 0.6); border-color: rgba(255, 196, 0, 0.9); } 
 }
-@keyframes gradientShift { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
-@keyframes spinAng { to { --ang: 360deg; } }
-@keyframes spin { to { transform: rotate(360deg); } }
-@keyframes popIn { from { opacity: 0; transform: scale(0.6); } to { opacity: 1; transform: scale(1); } }
-@keyframes slideIn { from { opacity: 0; transform: translateX(-16px); } to { opacity: 1; transform: translateX(0); } }
-@keyframes accIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
-@keyframes panelIn { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
-@keyframes markerIn { from { left: 0%; } }
-@keyframes growX { from { transform: scaleX(0); } }
-@keyframes ringFill { from { stroke-dasharray: 0 276.5; } }
-@keyframes barGlow { 0%, 100% { opacity: 0.75; } 50% { opacity: 1; } }
-@keyframes orbPulse { 0%, 100% { transform: scale(1); filter: drop-shadow(0 0 8px rgba(0,229,255,0.4)); } 50% { transform: scale(1.1); filter: drop-shadow(0 0 20px rgba(0,229,255,0.9)); } }
-@keyframes ecgDraw { 0% { stroke-dashoffset: 420; opacity: 1; } 70% { stroke-dashoffset: 0; opacity: 1; } 100% { stroke-dashoffset: 0; opacity: 0; } }
-@keyframes stepCycle {
-    0% { opacity: 0; transform: translateY(10px); }
-    5%, 30% { opacity: 1; transform: translateY(0); }
-    35%, 100% { opacity: 0; transform: translateY(-10px); }
+@keyframes scanline { 
+    0% { top: 0; opacity: 0; } 
+    15% { opacity: 1; } 
+    85% { opacity: 1; } 
+    100% { top: 100%; opacity: 0; } 
 }
-@keyframes draw { to { stroke-dashoffset: 0; } }
-@keyframes shine { from { left: -60%; } to { left: 130%; } }
-
-/* ---------- Typography ---------- */
-.cl-title {
-    font-size: 2.2rem; font-weight: 700; letter-spacing: -0.04em; margin: 0;
-    background: linear-gradient(120deg, #ffffff 0%, #a3b1c6 35%, #00e5ff 60%, #ffffff 100%);
-    background-size: 220% 220%; animation: gradientShift 9s ease infinite;
-    -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+@keyframes dotPulse { 
+    0% { box-shadow: 0 0 0 0 rgba(0, 229, 255, 0.5); } 
+    70% { box-shadow: 0 0 0 12px rgba(0, 229, 255, 0); } 
+    100% { box-shadow: 0 0 0 0 rgba(0, 229, 255, 0); } 
 }
+/* Headings & Typography */
+.cl-title { font-size: 2.2rem; font-weight: 700; letter-spacing: -0.04em; margin: 0; background: linear-gradient(135deg, #ffffff 0%, #a3b1c6 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
 .cl-tagline { font-size: 1.05rem; color: var(--text-muted); margin-top: 4px; font-weight: 500; }
-.cl-sub { font-size: 1.02rem; color: var(--text-muted); line-height: 1.6; }
 .cl-h2 { font-size: 1.6rem; font-weight: 700; letter-spacing: -0.03em; color: var(--text-main); margin-bottom: 8px; }
 .cl-eyebrow { font: 600 12px/1 'JetBrains Mono', monospace; letter-spacing: 0.2em; text-transform: uppercase; color: var(--neon-cyan); margin-bottom: 8px; }
-
-/* ---------- Header ---------- */
-.cl-header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 24px; border-bottom: 1px solid var(--border-glass); margin-bottom: 24px; flex-wrap: wrap; gap: 20px; animation: cardRise 0.8s var(--ease-out) backwards; }
+/* Header & Ribbons */
+.cl-header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 24px; border-bottom: 1px solid var(--border-glass); margin-bottom: 24px; flex-wrap: wrap; gap: 20px; }
 .cl-brand { display: flex; align-items: center; gap: 20px; }
-.cl-logo {
-    position: relative; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center;
-    background: rgba(0, 10, 20, 0.5); border: 1px solid rgba(0, 229, 255, 0.4); border-radius: 18px;
-    box-shadow: 0 8px 30px rgba(0, 229, 255, 0.25), inset 0 0 20px rgba(0,229,255,0.1); backdrop-filter: blur(12px);
+/* STUNNING 3D LOGO CONTAINER */
+.cl-logo { 
+    width: 60px; height: 60px; 
+    display: flex; align-items: center; justify-content: center; 
+    background: rgba(0, 10, 20, 0.5); 
+    border: 1px solid rgba(0, 229, 255, 0.4); 
+    border-radius: 18px; 
+    box-shadow: 0 8px 30px rgba(0, 229, 255, 0.25), inset 0 0 20px rgba(0,229,255,0.1); 
+    backdrop-filter: blur(12px);
 }
-.cl-logo::after { content: ""; position: absolute; inset: -6px; border-radius: 22px; border: 1px dashed rgba(0, 229, 255, 0.35); animation: spin 14s linear infinite; pointer-events: none; }
 .cl-logo img, .cl-logo svg { width: 44px; height: 44px; }
-.cl-ecg { flex: 1; min-width: 120px; max-width: 280px; height: 44px; opacity: 0.6; }
-@media (max-width: 900px) { .cl-ecg { display: none; } }
-.ecg-line, .cl-ecg path { fill: none; stroke: var(--neon-cyan); stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 420; stroke-dashoffset: 420; animation: ecgDraw 2.6s linear infinite; filter: drop-shadow(0 0 6px rgba(0,229,255,0.8)); }
+/* Status Chip */
 .cl-chip { display: inline-flex; align-items: center; gap: 10px; padding: 8px 18px; border-radius: 999px; background: rgba(0, 229, 255, 0.05); border: 1px solid rgba(0, 229, 255, 0.3); font: 500 13px 'JetBrains Mono', monospace; color: var(--neon-cyan); box-shadow: 0 0 20px rgba(0, 229, 255, 0.1); backdrop-filter: blur(8px); }
 .cl-chip-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--neon-cyan); animation: dotPulse 2s infinite; }
-.cl-prefs { display: flex; gap: 24px; flex-wrap: wrap; margin: 16px 0 8px; font-size: 0.95rem; color: var(--text-muted); animation: slideIn 0.7s var(--ease-out) 0.15s backwards; }
+.cl-prefs { display: flex; gap: 24px; flex-wrap: wrap; margin: 16px 0 8px; font-size: 0.95rem; color: var(--text-muted); }
 .cl-prefs strong { color: var(--text-main); font-weight: 600; padding: 4px 10px; background: rgba(255,255,255,0.05); border-radius: 6px; border: 1px solid rgba(255,255,255,0.1); }
-
-/* ---------- Uploader ---------- */
-[data-testid="stFileUploaderDropzone"] {
-    position: relative; overflow: hidden; background: var(--surface-glass) !important;
-    border: 1px dashed rgba(0, 229, 255, 0.4) !important; border-radius: 20px !important;
-    transition: all 0.4s var(--ease-out) !important; backdrop-filter: blur(12px);
+/* Sci-Fi Laser Uploader */
+[data-testid="stFileUploaderDropzone"] { 
+    position: relative; overflow: hidden; background: var(--surface-glass) !important; 
+    border: 1px dashed rgba(0, 229, 255, 0.4) !important; border-radius: 20px !important; 
+    transition: all 0.3s var(--ease-out) !important; backdrop-filter: blur(12px); 
 }
-[data-testid="stFileUploaderDropzone"]:hover {
-    border-color: var(--neon-cyan) !important; background: var(--surface-glass-hover) !important;
-    box-shadow: 0 0 50px rgba(0, 229, 255, 0.2) !important; transform: scale(1.008);
+[data-testid="stFileUploaderDropzone"]:hover { 
+    border-color: var(--neon-cyan) !important; background: var(--surface-glass-hover) !important; 
+    box-shadow: 0 0 40px rgba(0, 229, 255, 0.15) !important; 
 }
-[data-testid="stFileUploaderDropzone"]::after {
-    content: ""; position: absolute; left: 0; right: 0; top: 0; height: 2px;
-    background: var(--neon-cyan); box-shadow: 0 0 12px var(--neon-cyan), 0 0 24px var(--neon-cyan);
-    animation: scanline 3s linear infinite; pointer-events: none;
+[data-testid="stFileUploaderDropzone"]::after { 
+    content: ""; position: absolute; left: 0; right: 0; top: 0; height: 2px; 
+    background: var(--neon-cyan); box-shadow: 0 0 12px var(--neon-cyan), 0 0 24px var(--neon-cyan); 
+    animation: scanline 3s linear infinite; pointer-events: none; 
 }
-
-/* ---------- Glass cards ---------- */
-.metric-card, .food-card, .cl-summary, .ob-card, details.dq {
-    position: relative;
-    background: var(--surface-glass); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
-    border: 1px solid var(--border-glass); border-radius: 24px; box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
-    animation: cardRise 0.8s var(--ease-spring) backwards;
-    transition: transform 0.45s var(--ease-out), box-shadow 0.45s var(--ease-out), border-color 0.45s var(--ease-out);
+/* Glass Cards Master Class */
+.metric-card, .food-card, .cl-summary, .ob-card, details.dq { 
+    background: var(--surface-glass); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); 
+    border: 1px solid var(--border-glass); border-radius: 24px; box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3); 
+    animation: cardRise 0.7s var(--ease-spring) both; 
+    transition: transform 0.4s var(--ease-out), box-shadow 0.4s var(--ease-out), border-color 0.4s var(--ease-out); 
 }
-.metric-card:hover, .food-card:hover {
-    transform: translateY(-8px) scale(1.015); border-color: rgba(255, 255, 255, 0.2);
-    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5), 0 0 30px rgba(0, 229, 255, 0.08);
+.metric-card:hover, .food-card:hover { 
+    transform: translateY(-8px) scale(1.015); border-color: rgba(255, 255, 255, 0.2); 
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5), 0 0 30px rgba(0, 229, 255, 0.08); 
 }
-/* light sweep on hover */
-.metric-card::after, .food-card::after {
-    content: ""; position: absolute; top: 0; left: -60%; width: 40%; height: 100%;
-    background: linear-gradient(100deg, transparent, rgba(255,255,255,0.08), transparent);
-    transform: skewX(-20deg); pointer-events: none;
-}
-.metric-card:hover::after, .food-card:hover::after { animation: shine 0.9s var(--ease-out); }
-.food-card { overflow: hidden; }
-
-/* rotating gradient border on hero panels */
-.cl-summary::before, .ob-card::before {
-    content: ""; position: absolute; inset: 0; border-radius: inherit; padding: 1.5px; pointer-events: none;
-    background: conic-gradient(from var(--ang), transparent 0%, var(--neon-cyan) 10%, transparent 24%, var(--neon-emerald) 52%, transparent 68%, var(--neon-violet) 85%, transparent 100%);
-    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-    -webkit-mask-composite: xor; mask-composite: exclude;
-    animation: spinAng 7s linear infinite;
-}
-
-/* ---------- Metric cards ---------- */
+/* Metric Cards specific */
 .metric-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px; margin-top: 12px; }
-.metric-card { padding: 26px; overflow: hidden; display: flex; flex-direction: column; justify-content: space-between; }
+.metric-card { padding: 26px; position: relative; overflow: hidden; display: flex; flex-direction: column; justify-content: space-between; }
 .metric-card.is-flagged { border-color: rgba(255, 23, 68, 0.35); background: linear-gradient(180deg, rgba(255, 23, 68, 0.04) 0%, transparent 100%), var(--surface-glass); }
 .metric-card.is-flagged:hover { box-shadow: 0 20px 50px rgba(255, 23, 68, 0.15); border-color: rgba(255, 23, 68, 0.7); }
 .metric-card.is-low { border-color: rgba(255, 196, 0, 0.35); background: linear-gradient(180deg, rgba(255, 196, 0, 0.04) 0%, transparent 100%), var(--surface-glass); }
 .metric-card.is-low:hover { box-shadow: 0 20px 50px rgba(255, 196, 0, 0.15); border-color: rgba(255, 196, 0, 0.7); }
-.flag-bar { position: absolute; top: 0; left: 0; right: 0; height: 4px; background: var(--neon-coral); box-shadow: 0 0 15px var(--neon-coral); animation: barGlow 2.4s ease-in-out infinite; }
+.flag-bar { position: absolute; top: 0; left: 0; right: 0; height: 4px; background: var(--neon-coral); box-shadow: 0 0 15px var(--neon-coral); }
 .metric-card.is-low .flag-bar { background: var(--neon-amber); box-shadow: 0 0 15px var(--neon-amber); }
 .metric-head { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; gap: 12px; }
 .metric-cat { font: 600 11px/1.2 'JetBrains Mono', monospace; letter-spacing: 0.18em; text-transform: uppercase; color: var(--text-muted); margin: 0 0 6px; }
 .metric-name { font-size: 1.15rem; font-weight: 600; margin: 0; color: var(--text-main); }
 .metric-value { display: flex; align-items: baseline; gap: 8px; margin: 0 0 4px; }
+/* Large High-Contrast Numbers for Readability */
 .metric-number { font: 700 3.6rem/1 'JetBrains Mono', monospace; color: var(--text-main); text-shadow: 0 4px 24px rgba(255,255,255,0.15); }
 .metric-card.is-flagged .metric-number { color: var(--neon-coral); text-shadow: 0 4px 24px rgba(255, 23, 68, 0.4); }
 .metric-card.is-low .metric-number { color: var(--neon-amber); text-shadow: 0 4px 24px rgba(255, 196, 0, 0.4); }
 .metric-unit { font: 500 1.1rem 'JetBrains Mono', monospace; color: var(--text-muted); }
 .metric-raw { font: 600 1.2rem/1.5 'JetBrains Mono', monospace; color: var(--text-main); }
+/* Apple-style Range Track */
 .range { margin-top: 24px; display: flex; flex-direction: column; gap: 10px; }
 .range-track { height: 8px; background: rgba(255,255,255,0.06); border-radius: 999px; position: relative; overflow: visible; }
-.range-safe { position: absolute; top: 0; bottom: 0; background: rgba(0, 230, 118, 0.25); border-radius: 999px; border: 1px solid rgba(0, 230, 118, 0.5); transform-origin: left center; animation: growX 1s var(--ease-out) 0.2s backwards; }
-.range-marker { position: absolute; top: 50%; width: 18px; height: 18px; transform: translate(-50%, -50%); border-radius: 50%; background: var(--neon-emerald); box-shadow: 0 0 16px var(--neon-emerald), inset 0 0 0 4px var(--bg-deep); z-index: 2; animation: markerIn 1.5s var(--ease-spring) 0.35s backwards; }
+.range-safe { position: absolute; top: 0; bottom: 0; background: rgba(0, 230, 118, 0.25); border-radius: 999px; border: 1px solid rgba(0, 230, 118, 0.5); }
+.range-marker { position: absolute; top: 50%; width: 18px; height: 18px; transform: translate(-50%, -50%); border-radius: 50%; background: var(--neon-emerald); box-shadow: 0 0 16px var(--neon-emerald), inset 0 0 0 4px var(--bg-deep); z-index: 2; transition: left 1s var(--ease-spring); }
 .metric-card.is-flagged .range-marker { background: var(--neon-coral); box-shadow: 0 0 16px var(--neon-coral), inset 0 0 0 4px var(--bg-deep); }
 .metric-card.is-low .range-marker { background: var(--neon-amber); box-shadow: 0 0 16px var(--neon-amber), inset 0 0 0 4px var(--bg-deep); }
 .range-labels { display: flex; justify-content: space-between; font: 500 12px 'JetBrains Mono', monospace; color: var(--text-muted); }
 .metric-explain { padding-top: 18px; margin-top: 18px; border-top: 1px dashed rgba(255,255,255,0.1); font-size: 0.98rem; line-height: 1.6; color: rgba(255,255,255,0.85); margin-bottom: 0; }
 .metric-explain strong { color: var(--text-main); font-weight: 600; display: block; margin-bottom: 6px; }
-
-/* ---------- Pills ---------- */
+/* Neon Breathing Pills */
 .pill { display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px; border-radius: 999px; font: 700 11px/1 'JetBrains Mono', monospace; letter-spacing: 0.12em; text-transform: uppercase; white-space: nowrap; border: 1px solid transparent; }
 .pill svg { width: 14px; height: 14px; }
 .pill-dot { position: relative; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
@@ -250,39 +203,24 @@ header[data-testid="stHeader"] { background: transparent !important; }
 .pill-normal { background: rgba(0, 230, 118, 0.12); color: var(--neon-emerald); border-color: rgba(0, 230, 118, 0.4); box-shadow: 0 0 15px rgba(0, 230, 118, 0.15); }
 .pill-high { background: rgba(255, 23, 68, 0.12); color: var(--neon-coral); animation: breatheCoral 2.5s ease-in-out infinite; }
 .pill-low { background: rgba(255, 196, 0, 0.12); color: var(--neon-amber); animation: breatheAmber 2.5s ease-in-out infinite; }
-
-/* ---------- Summary panel ---------- */
+/* Summary Dashboard Panel */
 .cl-summary { padding: 36px; display: grid; gap: 28px; margin: 32px 0 16px; border-radius: 28px; }
-.cl-summary-top { display: flex; align-items: center; gap: 32px; flex-wrap: wrap; }
-.cl-summary-copy { flex: 1; min-width: 260px; }
 .cl-summary-text { font-size: 1.15rem; line-height: 1.7; color: rgba(255,255,255,0.95); margin: 0; }
-.ring { position: relative; width: 132px; height: 132px; flex-shrink: 0; }
-.ring svg { width: 100%; height: 100%; filter: drop-shadow(0 0 10px rgba(0,230,118,0.45)); }
-.ring-bg { fill: none; stroke: rgba(255,255,255,0.07); stroke-width: 8; }
-.ring-fg { fill: none; stroke: var(--neon-emerald); stroke-width: 8; stroke-linecap: round; animation: ringFill 1.8s var(--ease-out) 0.3s backwards; }
-.ring.mid svg { filter: drop-shadow(0 0 10px rgba(255,196,0,0.45)); } .ring.mid .ring-fg { stroke: var(--neon-amber); }
-.ring.low svg { filter: drop-shadow(0 0 10px rgba(255,23,68,0.45)); } .ring.low .ring-fg { stroke: var(--neon-coral); }
-.ring-label { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-.ring-pct { font: 700 1.9rem/1 'JetBrains Mono', monospace; color: var(--text-main); }
-.ring-cap { font: 600 9px/1.3 'JetBrains Mono', monospace; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-muted); margin-top: 6px; text-align: center; max-width: 78px; }
 .cl-stats { display: flex; gap: 16px; flex-wrap: wrap; }
-.cl-stat { flex: 1; min-width: 150px; background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.06); padding: 22px; border-radius: 18px; display: flex; flex-direction: column; gap: 10px; box-shadow: inset 0 2px 10px rgba(255,255,255,0.02); animation: popIn 0.6s var(--ease-spring) backwards; transition: transform 0.35s var(--ease-out), border-color 0.35s var(--ease-out); }
-.cl-stat:hover { transform: translateY(-4px); border-color: rgba(255,255,255,0.18); }
+.cl-stat { flex: 1; min-width: 150px; background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.06); padding: 22px; border-radius: 18px; display: flex; flex-direction: column; gap: 10px; box-shadow: inset 0 2px 10px rgba(255,255,255,0.02); }
 .cl-stat-label { font: 600 12px 'JetBrains Mono', monospace; letter-spacing: 0.18em; text-transform: uppercase; color: var(--text-muted); }
 .cl-stat-value { font: 700 2.8rem/1 'JetBrains Mono', monospace; color: var(--text-main); }
 .cl-stat-normal .cl-stat-value { color: var(--neon-emerald); text-shadow: 0 0 20px rgba(0,230,118,0.3); }
 .cl-stat-flagged .cl-stat-value { color: var(--neon-coral); text-shadow: 0 0 20px rgba(255,23,68,0.3); }
-.cl-flag-tag { background: rgba(255,23,68,0.15); color: var(--neon-coral); padding: 8px 14px; border-radius: 10px; font-weight: 600; font-size: 0.9rem; border: 1px solid rgba(255,23,68,0.3); box-shadow: 0 0 12px rgba(255,23,68,0.15); animation: popIn 0.5s var(--ease-spring) backwards; }
+.cl-flag-tag { background: rgba(255,23,68,0.15); color: var(--neon-coral); padding: 8px 14px; border-radius: 10px; font-weight: 600; font-size: 0.9rem; border: 1px solid rgba(255,23,68,0.3); box-shadow: 0 0 12px rgba(255,23,68,0.15); }
 .cl-flag-list { display: flex; gap: 12px; flex-wrap: wrap; }
-
-/* ---------- Nutrition & Doctor ---------- */
+/* Nutrition & Doctor Consultation */
 .food-card { padding: 28px; display: flex; flex-direction: column; gap: 18px; }
 .food-head { display: flex; justify-content: space-between; align-items: center; gap: 16px; }
 .food-title { font-size: 1.25rem; font-weight: 600; margin: 0; color: var(--text-main); }
 .food-body { font-size: 1.05rem; line-height: 1.8; color: rgba(255,255,255,0.85); margin: 0; white-space: pre-line; }
 .dq-list { display: flex; flex-direction: column; gap: 14px; margin-top: 16px; }
 details.dq { margin-bottom: 0; }
-details.dq:hover { border-color: rgba(255,255,255,0.18); }
 details.dq > summary { padding: 22px 26px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; list-style: none; gap: 16px; }
 details.dq > summary::-webkit-details-marker { display: none; }
 details.dq[open] { border-color: rgba(0, 229, 255, 0.4); box-shadow: 0 12px 32px rgba(0, 229, 255, 0.15); background: rgba(0, 229, 255, 0.03); }
@@ -290,89 +228,39 @@ details.dq[open] { border-color: rgba(0, 229, 255, 0.4); box-shadow: 0 12px 32px
 .dq-count { background: rgba(0, 229, 255, 0.15); color: var(--neon-cyan); border: 1px solid rgba(0,229,255,0.3); width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border-radius: 10px; font: 700 15px 'JetBrains Mono', monospace; box-shadow: 0 0 15px rgba(0,229,255,0.2); }
 .dq-name { font-size: 1.15rem; font-weight: 600; color: var(--text-main); }
 .dq-right { display: flex; align-items: center; gap: 16px; }
-.dq-chev { width: 22px; height: 22px; color: var(--text-muted); transition: transform 0.4s var(--ease-spring), color 0.3s; }
+.dq-chev { width: 22px; height: 22px; color: var(--text-muted); transition: transform 0.4s var(--ease-spring); }
 details.dq[open] .dq-chev { transform: rotate(180deg); color: var(--neon-cyan); }
 .dq-body { padding: 0 26px 26px; }
-details.dq[open] .dq-body { animation: accIn 0.45s var(--ease-out); }
 .dq-body ol { list-style: none; counter-reset: q; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 14px; }
-.dq-body li { counter-increment: q; background: rgba(0,0,0,0.3); border: 1px solid var(--border-glass); padding: 18px 20px; border-radius: 14px; font-size: 1.05rem; color: rgba(255,255,255,0.9); display: flex; gap: 18px; line-height: 1.6; animation: slideIn 0.55s var(--ease-out) backwards; transition: transform 0.3s var(--ease-out), border-color 0.3s; }
-.dq-body li:hover { transform: translateX(6px); border-color: rgba(0,229,255,0.35); }
-.dq-body li:nth-child(1) { animation-delay: 0.05s; } .dq-body li:nth-child(2) { animation-delay: 0.13s; }
-.dq-body li:nth-child(3) { animation-delay: 0.21s; } .dq-body li:nth-child(4) { animation-delay: 0.29s; }
+.dq-body li { counter-increment: q; background: rgba(0,0,0,0.3); border: 1px solid var(--border-glass); padding: 18px 20px; border-radius: 14px; font-size: 1.05rem; color: rgba(255,255,255,0.9); display: flex; gap: 18px; line-height: 1.6; }
 .dq-body li::before { content: counter(q, decimal-leading-zero); font: 700 15px/1.5 'JetBrains Mono', monospace; color: var(--neon-cyan); flex-shrink: 0; }
-
-/* ---------- Empty states ---------- */
-.cl-empty { margin-top: 20px; padding: 28px; border-radius: 20px; background: var(--surface-glass); border: 1px dashed rgba(255,196,0,0.4); color: rgba(255,255,255,0.85); animation: cardRise 0.7s var(--ease-spring) backwards; }
-.cl-empty-state { display: flex; align-items: center; gap: 22px; padding: 30px 32px; border-radius: 24px; background: var(--surface-glass); backdrop-filter: blur(20px); border: 1px solid rgba(0,230,118,0.3); box-shadow: 0 0 40px rgba(0,230,118,0.08); margin-top: 12px; animation: cardRise 0.8s var(--ease-spring) backwards; }
-.cl-empty-state.warn { border-color: rgba(255,196,0,0.35); box-shadow: 0 0 40px rgba(255,196,0,0.08); }
-.cl-empty-state p { margin: 0; font-size: 1.08rem; line-height: 1.7; color: rgba(255,255,255,0.9); }
-.es-icon { width: 54px; height: 54px; flex-shrink: 0; color: var(--neon-emerald); filter: drop-shadow(0 0 10px rgba(0,230,118,0.6)); }
-.cl-empty-state.warn .es-icon { color: var(--neon-amber); filter: drop-shadow(0 0 10px rgba(255,196,0,0.6)); }
-.es-icon svg { width: 100%; height: 100%; }
-.es-icon circle { stroke-dasharray: 64; stroke-dashoffset: 64; animation: draw 1s var(--ease-out) forwards; }
-.es-icon path { stroke-dasharray: 20; stroke-dashoffset: 20; animation: draw 0.7s var(--ease-out) 0.5s forwards; }
-
-/* ---------- Loader ---------- */
-.ld { display: flex; flex-direction: column; align-items: center; gap: 22px; padding: 48px 24px; margin-top: 24px; text-align: center; background: var(--surface-glass); border: 1px solid rgba(0,229,255,0.2); border-radius: 28px; backdrop-filter: blur(20px); box-shadow: 0 0 60px rgba(0,229,255,0.08); animation: cardRise 0.6s var(--ease-spring) backwards; }
-.ld-orb { position: relative; width: 104px; height: 104px; display: flex; align-items: center; justify-content: center; }
-.ld-orb::before { content: ""; position: absolute; inset: 0; border-radius: 50%; border: 2px solid transparent; border-top-color: var(--neon-cyan); border-right-color: var(--neon-emerald); animation: spin 1.1s linear infinite; }
-.ld-orb::after { content: ""; position: absolute; inset: 10px; border-radius: 50%; border: 2px solid transparent; border-bottom-color: rgba(124,77,255,0.8); border-left-color: rgba(0,229,255,0.4); animation: spin 2s linear infinite reverse; }
-.ld-orb img { width: 54px; height: 54px; animation: orbPulse 2s ease-in-out infinite; }
-.ld-title { font-size: 1.4rem; font-weight: 700; color: var(--text-main); margin: 0; }
-.ld-steps { position: relative; height: 1.5em; width: 100%; font: 500 0.95rem 'JetBrains Mono', monospace; color: var(--neon-cyan); }
-.ld-steps span { position: absolute; inset: 0; opacity: 0; animation: stepCycle 9s infinite; }
-.ld-steps span:nth-child(2) { animation-delay: 3s; } .ld-steps span:nth-child(3) { animation-delay: 6s; }
-.ld-ecg { width: min(320px, 80%); height: 48px; }
-
-/* ---------- Tabs ---------- */
+/* Linear-style Streamlit Tabs Overrides */
 .stTabs [data-baseweb="tab-list"] { background: var(--surface-glass); backdrop-filter: blur(24px); border-radius: 18px; padding: 8px; gap: 10px; border: 1px solid var(--border-glass); display: inline-flex; margin-bottom: 32px; box-shadow: 0 12px 32px rgba(0,0,0,0.3); }
-.stTabs [data-baseweb="tab"] { background: transparent; border-radius: 12px; padding: 12px 28px; transition: all 0.35s var(--ease-out); border: none; color: var(--text-muted); font-weight: 600; font-size: 1.05rem; letter-spacing: 0.02em; }
-.stTabs [data-baseweb="tab"]:hover { color: var(--text-main); background: rgba(255,255,255,0.05); transform: translateY(-2px); }
+.stTabs [data-baseweb="tab"] { background: transparent; border-radius: 12px; padding: 12px 28px; transition: all 0.3s var(--ease-out); border: none; color: var(--text-muted); font-weight: 600; font-size: 1.05rem; letter-spacing: 0.02em; }
 .stTabs [aria-selected="true"] { background: rgba(255, 255, 255, 0.12) !important; color: var(--text-main) !important; box-shadow: 0 4px 20px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.1); }
 .stTabs [data-baseweb="tab-highlight"] { display: none; }
-.stTabs [data-baseweb="tab-panel"] { animation: panelIn 0.55s var(--ease-out); }
-
-/* ---------- Buttons ---------- */
+/* Buttons & Inputs */
 .stButton > button, .stDownloadButton > button {
-    position: relative; overflow: hidden;
     background: linear-gradient(135deg, var(--neon-cyan), #00b0ff) !important; color: #000 !important;
     border: none !important; border-radius: 14px !important; font-weight: 700 !important;
     padding: 0.7rem 1.4rem !important; font-size: 1.05rem !important;
     box-shadow: 0 6px 20px rgba(0, 229, 255, 0.35) !important; transition: all 0.3s var(--ease-out) !important;
 }
-.stButton > button::after, .stDownloadButton > button::after {
-    content: ""; position: absolute; top: 0; left: -60%; width: 40%; height: 100%;
-    background: linear-gradient(100deg, transparent, rgba(255,255,255,0.55), transparent); transform: skewX(-20deg); pointer-events: none;
+.stButton > button:hover, .stDownloadButton > button:hover {
+    transform: translateY(-3px) scale(1.02) !important; box-shadow: 0 10px 30px rgba(0, 229, 255, 0.5) !important;
 }
-.stButton > button:hover, .stDownloadButton > button:hover { transform: translateY(-3px) scale(1.02) !important; box-shadow: 0 10px 30px rgba(0, 229, 255, 0.5) !important; }
-.stButton > button:hover::after, .stDownloadButton > button:hover::after { animation: shine 0.8s var(--ease-out); }
-.stButton > button:active, .stDownloadButton > button:active { transform: translateY(0) scale(0.97) !important; }
 .st-key-change_prefs button { background: transparent !important; color: var(--text-main) !important; border: 1px solid var(--border-glass) !important; box-shadow: none !important; }
 .st-key-change_prefs button:hover { background: rgba(255,255,255,0.08) !important; border-color: rgba(255,255,255,0.25) !important; }
-
-/* ---------- Radio (onboarding) ---------- */
-div[data-testid="stRadio"] [role="radiogroup"] { gap: 10px; }
-div[data-testid="stRadio"] label { background: var(--surface-glass); border: 1px solid var(--border-glass); border-radius: 14px; padding: 14px 18px; transition: all 0.3s var(--ease-out); cursor: pointer; width: 100%; }
-div[data-testid="stRadio"] label:hover { border-color: rgba(0,229,255,0.5); transform: translateX(5px); background: var(--surface-glass-hover); }
-div[data-testid="stRadio"] label:has(input:checked) { border-color: var(--neon-cyan); background: rgba(0,229,255,0.06); box-shadow: 0 0 24px rgba(0,229,255,0.2); }
-div[data-testid="stRadio"] label p { color: var(--text-main) !important; font-size: 1.05rem; font-weight: 600; }
-
-/* ---------- Onboarding ---------- */
-.ob-card { animation: cardRise 0.8s var(--ease-spring) backwards, floatSlow 6s ease-in-out 0.8s infinite; padding: 56px 40px; text-align: center; border: 1px solid rgba(0, 229, 255, 0.25); box-shadow: 0 20px 60px rgba(0,0,0,0.5), inset 0 0 50px rgba(0,229,255,0.06); margin-top: 48px; }
+/* Floating Spatial Onboarding */
+.ob-card { animation: cardRise 0.7s var(--ease-spring) both, floatSlow 6s ease-in-out infinite; padding: 56px 40px; text-align: center; border: 1px solid rgba(0, 229, 255, 0.25); box-shadow: 0 20px 60px rgba(0,0,0,0.5), inset 0 0 50px rgba(0,229,255,0.06); margin-top: 48px; }
 .ob-card .cl-logo { margin: 0 auto 28px; }
 .ob-step { display: inline-block; font: 700 12px 'JetBrains Mono', monospace; letter-spacing: 0.25em; text-transform: uppercase; color: var(--neon-cyan); margin-bottom: 16px; background: rgba(0,229,255,0.12); padding: 6px 16px; border-radius: 999px; }
 .ob-title { font-size: 2.4rem; font-weight: 700; color: var(--text-main); margin: 0 0 18px; letter-spacing: -0.03em; }
 .ob-desc { font-size: 1.15rem; line-height: 1.6; color: var(--text-muted); margin: 0 auto; max-width: 520px; }
 .cl-footer { margin-top: 60px; padding-top: 24px; border-top: 1px dashed var(--border-glass); text-align: center; font-size: 0.85rem; color: #5e6b82; letter-spacing: 0.02em; }
-
-/* ---------- Accessibility ---------- */
-@media (prefers-reduced-motion: reduce) {
-    *, *::before, *::after { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; }
-}
 </style>
 """
 render_html(THEME_CSS)
-render_html('<div class="aurora" aria-hidden="true"><i></i><i></i><i></i></div>')
 
 # REALISTIC 3D GLOSSY SVG LOGO (Base64 Encoded to bypass Streamlit Sanitization)
 RAW_SVG = """<svg width="100%" height="100%" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
@@ -417,10 +305,6 @@ ICON_LOGO = f'<img src="data:image/svg+xml;base64,{B64_LOGO}" alt="Logo" style="
 ICON_UP = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>'
 ICON_DOWN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M19 12l-7 7-7-7"/></svg>'
 ICON_CHEV = '<svg class="dq-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>'
-ICON_CHECK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 12.5l2.7 2.7L16 9.5"/></svg>'
-ICON_WARN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 7v6"/><path d="M12 16.5v.5"/></svg>'
-ECG_PATH = "M0 30 H100 L112 30 L122 6 L136 54 L148 18 L156 30 H320"
-ICON_ECG = f'<svg class="cl-ecg" viewBox="0 0 320 60" preserveAspectRatio="none" aria-hidden="true"><path d="{ECG_PATH}"/></svg>'
 
 # Session state
 if "onboarding_step" not in st.session_state:
@@ -468,12 +352,6 @@ TEXTS = {
         "questions_hint": "Flagged biomarkers are listed first. Tap a biomarker to expand its questions.",
         "no_results": "No medical biomarkers could be extracted from this document. Please ensure the scan is clear.",
         "step": "Step", "general_questions": "General questions",
-        "no_food": "All your biomarkers are within the normal range, so no specific dietary changes are needed. Keep up a balanced diet and regular activity.",
-        "no_questions": "No flagged biomarkers, so there are no specific questions for your doctor. You can still share this report during your next routine check-up.",
-        "ai_missing": "Explanations could not be generated for the flagged biomarkers this time. Please retry the analysis.",
-        "retry": "Retry analysis",
-        "load_title": "Analyzing your report",
-        "load_1": "Reading document…", "load_2": "Extracting biomarkers…", "load_3": "Preparing simple explanations…",
     },
     "हिंदी": {
         "title": "क्लैरिटीलैब एआई",
@@ -510,12 +388,6 @@ TEXTS = {
         "questions_hint": "असामान्य पैरामीटर पहले दिखाए गए हैं। सवाल देखने के लिए किसी पैरामीटर पर टैप करें।",
         "no_results": "इस फाइल से कोई मेडिकल पैरामीटर नहीं पढ़ा जा सका। कृपया स्पष्ट स्कैन अपलोड करें।",
         "step": "चरण", "general_questions": "सामान्य सवाल",
-        "no_food": "आपके सभी पैरामीटर सामान्य सीमा में हैं, इसलिए किसी विशेष आहार बदलाव की जरूरत नहीं है। संतुलित आहार और नियमित व्यायाम जारी रखें।",
-        "no_questions": "कोई असामान्य पैरामीटर नहीं है, इसलिए डॉक्टर से पूछने के लिए कोई विशेष सवाल नहीं है। अगले रूटीन चेकअप में यह रिपोर्ट दिखा सकते हैं।",
-        "ai_missing": "इस बार असामान्य पैरामीटर के लिए व्याख्या तैयार नहीं हो सकी। कृपया विश्लेषण दोबारा चलाएँ।",
-        "retry": "फिर से विश्लेषण करें",
-        "load_title": "आपकी रिपोर्ट का विश्लेषण हो रहा है",
-        "load_1": "दस्तावेज़ पढ़ा जा रहा है…", "load_2": "बायोमार्कर निकाले जा रहे हैं…", "load_3": "सरल व्याख्या तैयार हो रही है…",
     },
     "ગુજરાતી": {
         "title": "ક્લેરિટીલેબ એઆઈ",
@@ -552,12 +424,6 @@ TEXTS = {
         "questions_hint": "અસામાન્ય પેરામીટર પહેલા બતાવ્યા છે. પ્રશ્નો જોવા માટે પેરામીટર પર ટેપ કરો.",
         "no_results": "આ ફાઇલમાંથી કોઈ મેડિકલ પેરામીટર વાંચી શકાયા નહીં. કૃપા કરીને સ્પષ્ટ સ્કેન અપલોડ કરો.",
         "step": "પગલું", "general_questions": "સામાન્ય પ્રશ્નો",
-        "no_food": "તમારા બધા પેરામીટર સામાન્ય મર્યાદામાં છે, તેથી ખાસ આહાર ફેરફારની જરૂર નથી. સંતુલિત આહાર અને નિયમિત કસરત ચાલુ રાખો.",
-        "no_questions": "કોઈ અસામાન્ય પેરામીટર નથી, તેથી ડૉક્ટરને પૂછવા માટે ખાસ પ્રશ્નો નથી. આગલા રૂટિન ચેકઅપમાં આ રિપોર્ટ બતાવી શકો છો.",
-        "ai_missing": "આ વખતે અસામાન્ય પેરામીટર માટે સમજૂતી તૈયાર થઈ શકી નથી. કૃપા કરીને વિશ્લેષણ ફરી ચલાવો.",
-        "retry": "ફરી વિશ્લેષણ કરો",
-        "load_title": "તમારા રિપોર્ટનું વિશ્લેષણ થઈ રહ્યું છે",
-        "load_1": "દસ્તાવેજ વાંચી રહ્યા છીએ…", "load_2": "બાયોમાર્કર કાઢી રહ્યા છીએ…", "load_3": "સરળ સમજૂતી તૈયાર થઈ રહી છે…",
     }
 }
 L = TEXTS[st.session_state.selected_lang]
@@ -902,7 +768,7 @@ def metric_card(b: dict, index: int) -> str:
     if b["explanation"]:
         explain = f'<p class="metric-explain"><strong>{esc(L["what_happening"])}</strong>{esc(b["explanation"])}</p>'
     return f"""
-    <article class="metric-card {state_cls}" style="animation-delay:{index * 70}ms">
+    <article class="metric-card {state_cls}" style="animation-delay:{index * 60}ms">
         {flag_bar}
         <header class="metric-head">
             <div>{category}<h3 class="metric-name">{esc(b["name"])}</h3></div>
@@ -914,43 +780,22 @@ def metric_card(b: dict, index: int) -> str:
     </article>
     """
 
-def score_ring(pct: int) -> str:
-    circ = 276.46
-    dash = circ * pct / 100
-    cls = "" if pct >= 70 else "mid" if pct >= 40 else "low"
-    return (
-        f'<div class="ring {cls}" aria-label="{pct}%">'
-        f'<svg viewBox="0 0 100 100" aria-hidden="true">'
-        f'<circle class="ring-bg" cx="50" cy="50" r="44"/>'
-        f'<circle class="ring-fg" cx="50" cy="50" r="44" stroke-dasharray="{dash:.1f} 276.5" transform="rotate(-90 50 50)"/>'
-        f'</svg>'
-        f'<div class="ring-label"><span class="ring-pct">{pct}%</span><span class="ring-cap">{esc(L["stat_normal"])}</span></div>'
-        f'</div>'
-    )
-
 def summary_panel(summary: str, biomarkers: list) -> str:
     total = len(biomarkers)
     flagged = [b for b in biomarkers if b["code"] != "normal"]
     normal = total - len(flagged)
-    pct = round(normal / total * 100) if total else 0
-    tags = "".join(
-        f'<span class="cl-flag-tag" style="animation-delay:{0.5 + i * 0.07:.2f}s">{esc(b["name"])}</span>'
-        for i, b in enumerate(flagged)
-    )
+    tags = "".join(f'<span class="cl-flag-tag">{esc(b["name"])}</span>' for b in flagged)
     tag_row = f'<div class="cl-flag-list">{tags}</div>' if tags else ""
     return f"""
     <section class="cl-summary">
-        <div class="cl-summary-top">
-            {score_ring(pct)}
-            <div class="cl-summary-copy">
-                <p class="cl-eyebrow">{esc(L['summary_title'])}</p>
-                <p class="cl-summary-text">{esc(summary)}</p>
-            </div>
+        <div>
+            <p class="cl-eyebrow">{esc(L['summary_title'])}</p>
+            <p class="cl-summary-text">{esc(summary)}</p>
         </div>
         <div class="cl-stats">
-            <div class="cl-stat" style="animation-delay:.25s"><span class="cl-stat-label">{esc(L['stat_total'])}</span><span class="cl-stat-value">{total}</span></div>
-            <div class="cl-stat cl-stat-normal" style="animation-delay:.35s"><span class="cl-stat-label">{esc(L['stat_normal'])}</span><span class="cl-stat-value">{normal}</span></div>
-            <div class="cl-stat cl-stat-flagged" style="animation-delay:.45s"><span class="cl-stat-label">{esc(L['stat_flagged'])}</span><span class="cl-stat-value">{len(flagged)}</span></div>
+            <div class="cl-stat"><span class="cl-stat-label">{esc(L['stat_total'])}</span><span class="cl-stat-value">{total}</span></div>
+            <div class="cl-stat cl-stat-normal"><span class="cl-stat-label">{esc(L['stat_normal'])}</span><span class="cl-stat-value">{normal}</span></div>
+            <div class="cl-stat cl-stat-flagged"><span class="cl-stat-label">{esc(L['stat_flagged'])}</span><span class="cl-stat-value">{len(flagged)}</span></div>
         </div>
         {tag_row}
     </section>
@@ -960,30 +805,13 @@ def question_accordion(title: str, questions: list, code, is_open: bool, index: 
     items = "".join(f"<li>{esc(q)}</li>" for q in questions)
     pill = status_pill(code) if code else ""
     return f"""
-    <details class="dq" {'open' if is_open else ''} style="animation-delay:{index * 60}ms">
+    <details class="dq" {'open' if is_open else ''} style="animation-delay:{index * 50}ms">
         <summary>
             <span class="dq-left"><span class="dq-count">{len(questions)}</span><span class="dq-name">{esc(title)}</span></span>
             <span class="dq-right">{pill}{ICON_CHEV}</span>
         </summary>
         <div class="dq-body"><ol>{items}</ol></div>
     </details>
-    """
-
-def empty_state(message: str, ok: bool = True) -> str:
-    icon = ICON_CHECK if ok else ICON_WARN
-    cls = "" if ok else "warn"
-    return f'<div class="cl-empty-state {cls}"><span class="es-icon">{icon}</span><p>{esc(message)}</p></div>'
-
-def loader_html() -> str:
-    return f"""
-    <div class="ld" role="status" aria-live="polite">
-        <div class="ld-orb">{ICON_LOGO}</div>
-        <h3 class="ld-title">{esc(L['load_title'])}</h3>
-        <div class="ld-steps">
-            <span>{esc(L['load_1'])}</span><span>{esc(L['load_2'])}</span><span>{esc(L['load_3'])}</span>
-        </div>
-        <svg class="ld-ecg" viewBox="0 0 320 60" preserveAspectRatio="none" aria-hidden="true"><path class="ecg-line" d="{ECG_PATH}"/></svg>
-    </div>
     """
 
 # ---------------------------------------------------------
@@ -1052,7 +880,6 @@ else:
                     <p class="cl-tagline">{esc(L['tagline'])}</p>
                 </div>
             </div>
-            {ICON_ECG}
             <span class="cl-chip"><span class="cl-chip-dot" aria-hidden="true"></span>{esc(L['system_status'])}</span>
         </header>
         """)
@@ -1089,7 +916,6 @@ else:
 
     parsed_report_data = None
     error_notice = None
-    cache_key = None
 
     if uploaded_file is not None:
         file_bytes = uploaded_file.getvalue()
@@ -1106,22 +932,19 @@ else:
         parsed_report_data = st.session_state.analysis_cache.get(cache_key)
 
         if parsed_report_data is None:
-            loader = st.empty()
-            with loader.container():
-                render_html(loader_html())
-            parsed_report_data, error_notice = analyze_report_with_groq(
-                file_bytes, uploaded_file.name, mime_type,
-                st.session_state.selected_lang, st.session_state.selected_diet,
-                groq_api_key
-            )
-            loader.empty()
+            with st.spinner("Reading report, extracting biomarkers and generating explanations..."):
+                parsed_report_data, error_notice = analyze_report_with_groq(
+                    file_bytes, uploaded_file.name, mime_type,
+                    st.session_state.selected_lang, st.session_state.selected_diet,
+                    groq_api_key
+                )
             if parsed_report_data:
                 st.session_state.analysis_cache[cache_key] = parsed_report_data
 
         if error_notice and not parsed_report_data:
             st.error(error_notice)
         elif not parsed_report_data:
-            render_html(f'<div class="cl-empty">{esc(L["no_results"])}</div>')
+            render_html(f'<div class="cl-empty" style="margin-top:20px;">{esc(L["no_results"])}</div>')
 
     # -----------------------------------------------------
     # Render Diagnostic Results
@@ -1130,7 +953,6 @@ else:
         biomarkers = [normalise(p) for p in parsed_report_data.get("parameters", [])]
         order = {"high": 0, "low": 1, "normal": 2}
         biomarkers_sorted = sorted(biomarkers, key=lambda b: order[b["code"]])
-        has_flagged = any(b["code"] != "normal" for b in biomarkers)
 
         render_html(summary_panel(parsed_report_data.get("summary", ""), biomarkers))
 
@@ -1150,32 +972,21 @@ else:
             """)
 
         with tab_food:
-            food_items = [(i, b) for i, b in enumerate(biomarkers_sorted) if b["food"]]
-            if food_items:
-                food_cards = "".join(
-                    f"""
-                    <article class="food-card" style="animation-delay:{i * 70}ms">
-                        <header class="food-head"><h3 class="food-title">{esc(b['name'])}</h3>{status_pill(b['code'])}</header>
-                        <p class="food-body">{esc(b['food'])}</p>
-                    </article>
-                    """
-                    for i, b in food_items
-                )
-                body = f'<div class="metric-grid">{food_cards}</div>'
-            elif has_flagged:
-                body = empty_state(L["ai_missing"], ok=False)
-            else:
-                body = empty_state(L["no_food"], ok=True)
+            food_cards = "".join(
+                f"""
+                <article class="food-card" style="animation-delay:{i * 60}ms">
+                    <header class="food-head"><h3 class="food-title">{esc(b['name'])}</h3>{status_pill(b['code'])}</header>
+                    <p class="food-body">{esc(b['food'])}</p>
+                </article>
+                """
+                for i, b in enumerate(biomarkers_sorted) if b["food"]
+            )
             render_html(f"""
             <section aria-label="{esc(L['food_title'])}">
                 <h2 class="cl-h2" style="margin-top:8px">{esc(L['food_title'])}</h2>
-                {body}
+                <div class="metric-grid">{food_cards}</div>
             </section>
             """)
-            if not food_items and has_flagged and cache_key is not None:
-                if st.button(L["retry"], key="retry_food"):
-                    st.session_state.analysis_cache.pop(cache_key, None)
-                    st.rerun()
 
         with tab_doc:
             groups = [(b["name"], b["questions"], b["code"]) for b in biomarkers_sorted if b["questions"]]
@@ -1204,20 +1015,5 @@ else:
                     file_name=f"doctor_questions_{st.session_state.selected_lang.lower()}.txt",
                     mime="text/plain",
                 )
-            else:
-                if has_flagged:
-                    body = empty_state(L["ai_missing"], ok=False)
-                else:
-                    body = empty_state(L["no_questions"], ok=True)
-                render_html(f"""
-                <section aria-label="{esc(L['questions_title'])}">
-                    <h2 class="cl-h2" style="margin-top:8px">{esc(L['questions_title'])}</h2>
-                    {body}
-                </section>
-                """)
-                if has_flagged and cache_key is not None:
-                    if st.button(L["retry"], key="retry_doc"):
-                        st.session_state.analysis_cache.pop(cache_key, None)
-                        st.rerun()
 
     render_html(f'<footer class="cl-footer">{esc(L["disclaimer"])}</footer>')
